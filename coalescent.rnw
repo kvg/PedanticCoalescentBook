@@ -1,4 +1,4 @@
-\documentclass[justified]{tufte-book}
+\documentclass[justified,nols]{tufte-book}
 
 % =================
 % Macro definitions
@@ -12,7 +12,7 @@
 
 \makeatother
 
-\graphicspath{ {figure/}{results/v1/} }
+\graphicspath{{./}{./figure/}}
 
 % Book metadata
 \title{Coalescent theory: a pedantic dissection}
@@ -1442,7 +1442,7 @@ Recall equation \eqref{eq:prob_of_particular_event} which gives the probability 
 % =====================
 % Chapter: bibliography
 % =====================
-\bibliography{/Users/kiran/Documents/allpapers}
+\bibliography{allpapers}
 \bibliographystyle{plainnat}
 
 \end{document}
