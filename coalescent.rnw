@@ -1,0 +1,1448 @@
+\documentclass[justified]{tufte-book}
+
+% =================
+% Macro definitions
+% =================
+%\newcommand{\gene}[1]{\verb{$#1$}}
+\makeatletter
+
+\let\orig@maketag@@@\maketag@@@
+\renewcommand{\eqref}[1]{\textup{\let\maketag@@@\orig@maketag@@@\tagform@{\ref{#1}}}}
+\def\maketag@@@#1{\hbox{\rlap{\kern\marginparsep\m@th\normalfont#1}\kern1sp}}
+
+\makeatother
+
+\graphicspath{ {figure/}{results/v1/} }
+
+% Book metadata
+\title{Coalescent theory: a pedantic dissection}
+\author[Kiran V Garimella]{Kiran V Garimella}
+\publisher{Wellcome Trust Centre for Human Genetics}
+\makeindex
+
+\begin{document}
+
+% ===========
+% Page: title
+% ===========
+\maketitle
+
+% ===============
+% Page: copyright
+% ===============
+\begin{fullwidth}
+~\vfill
+\thispagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+Copyright \copyright\ \the\year\ \thanklessauthor
+
+\par\smallcaps{Published by \thanklesspublisher}
+
+\par\smallcaps{www.well.ox.ac.uk}
+
+\par All rights reserved.
+
+\par\textit{First printing, \monthyear}
+\end{fullwidth}
+
+% ==============
+% Page: contents
+% ==============
+\tableofcontents
+
+% =====================
+% Page: list of figures
+% =====================
+\listoffigures
+
+% ====================
+% Page: list of tables
+% ====================
+\listoftables
+
+% =================
+% Chapter: abstract
+% =================
+\cleardoublepage
+\chapter{Abstract}
+
+This book contains my notes on coalescent theory, sourced primarily from Coalescent Theory: An Introduction\citeg{Wakeley:2008wc} and Gene Genealogies, Variation and Evolution\citeg{Hein:2005ta}.  While those textbooks often expect a certain familiarity with combinatorics and statistics, this one does not.  These are my notes on the subject, and I can be incredibly pedantic.  Thus, you'll often find complete derivations here for things you might already know how to derive fairly easily (or might not have cared to in the first place).
+
+\mainmatter
+\setcounter{secnumdepth}{2}
+\makeatletter
+\titleformat{\chapter}%
+  [block]% shape
+  {\relax\ifthenelse{\NOT\boolean{@tufte@symmetric}}{\begin{fullwidth}}{}}% format applied to label+text
+  {\itshape\huge\thechapter\quad}% label
+  {0pt}% horizontal separation between label and title body
+  {\huge\rmfamily\itshape}% before the title body
+  [\ifthenelse{\NOT\boolean{@tufte@symmetric}}{\end{fullwidth}}{}]% after the title body
+\makeatother
+
+% =======================================
+% Chapter: Introduction to the coalescent
+% =======================================
+\chapter{Introduction to the coalescent}
+\label{ch:intro}
+
+Imagine a population of $N$ haploid organisms with alleles R and b, found with $i$ and $N-i$ copies respectively.  How many of each of these alleles to we expect to find in the next generation?  The answer to this question depends on the model we use to represent the data.  We shall consider two models below.
+
+\begin{marginfigure}
+<<poppool, echo=FALSE>>=
+# Generates N observations of alleles A and a, with i copies of A and N-i copies of a
+generateObservations <- function(N, i) {
+    labels.A = rep("red", i);
+    labels.a = rep("lightblue", N-i);
+
+    x = runif(N);
+    y = runif(N);
+    color = c(labels.A, labels.a);
+
+    d = data.frame(cbind(x, y, color), stringsAsFactors=FALSE);
+
+    return(d);
+}
+
+N = 20;
+i = 13;
+d = generateObservations(N, i);
+
+plot(d$x, d$y, col="black", bg=d$col, pch=21, xaxt="n", yaxt="n", xlab="", ylab="", cex=2.2, bty="n", xlim=c(0, 1), ylim=c(0, 1));
+@
+\caption{A population of size $N=\Sexpr{N}$ with $i=\Sexpr{i}$ copies of allele R (red) and $N-i=\Sexpr{N-i}$ copies of allele b (blue).}
+\label{fig:wf-populationpool}
+\end{marginfigure}
+
+\section{The Wright-Fisher model}
+The Wright-Fisher model places some constraints on this problem:
+
+1. Non-overlapping generations: all of the individuals in the current generation die and are replaced by offspring.
+
+2. Constant, finite population size: the population size $N$ does not vary over time.
+
+3. Reproduction is random: not every member of the current generation will produce offspring for the next.  This random loss of genetic lineages is called genetic drift.
+
+We shall model reproduction as sampling with replacement.  That is, we choose a sample from the current generation at random.  This sample clones itself, and the clone becomes a member of the next generation.  We repeat this process $N$ times (as we have assumed the population size is constant).  The sample sample may be chosen multiple times, while other samples might not be chosen at all.  Finally, after all iterations are complete, members of the current generation die and we are left with only the next generation.
+
+What is the probability that an allele with $i$ copies in the present generation is found in $j$ copies in the next?  Let us imagine ourselves as selecting the alleles from generation 0 out of an opaque bag filled with colored balls.  Red balls represent allele R, while blue represents allele b.  We shall start with $j = 1$, that is, that we should only expect to see our sought allele one time in the next generation.  We will vary $N$ and $i$ for the purposes of elucidating the model.  Should there only be $i = 1$ red ball in the bag (thus, $N = 1$ as well), computing the probability that allele A will appear in the next generation ($j = 1$) is trivial: it is $1$.  Two balls, one of each color?  Well, $N = 2$, $i = 1$, and $j = 1$.  The probability of observing a single red ball in the next generation can be produced two different ways.  Either then red ball can be chosen during the first round or the second.  The probability of choosing the red ball is:
+
+\begin{align*}
+P(ball = red) &= i/N \\
+              &= p
+\end{align*}
+
+while the probability we'll choose a blue ball is:
+
+\begin{align*}
+P(ball = blue) &= (N - i)/N \\
+               &= N/N - i/N \\
+               &= 1 - p \\
+               &= q
+\end{align*}
+
+There are two ways of generating the observed sequence (Rb or bR) and the probability of producing them is $pq$ and $qp$, respectively.  Thus, the total probability for observing allele R in the next generation is $pq + qp = 2pq$.
+
+What if $N = 3$, $i = 2$, and $j = 2$?  The possible sequences generating the final outcome are as follows:
+
+\begin{verbatim}
+RRb
+RbR
+bRR
+\end{verbatim}
+
+resulting in a probability of $ppq + pqp + qpp = 3p^2q$.
+
+$N = 4$, $i = 2$, and $j = 2$?
+
+\begin{verbatim}
+RRbb
+RbRb
+RbbR
+bRRb
+bRbR
+bbRR
+\end{verbatim}
+
+$ppqq + pqpq + pqqp + qppq + qpqp + qqpp = 6p^2q^2$.
+
+What about for arbitrary $N$, $i$, and $j$?  By now, we can see a pattern emerging.  The final result must look something like this:
+
+\begin{equation*}
+P(R = j; N, i) = C p^j q^{N-j}
+\end{equation*}
+
+indicating that the final probability for observing $j$ copies of allele R in generation 2, given that the first generation had $N$ alleles and $i$ copies of it, should be equal to some coefficient $C$ indicating the number of possible orderings we could have selected alleles to yield the final observed allele counts, multipled by the probability that allele R was selected $j$ times, multiplied by the probability that the allele b was selected $N - j$ times.  This coefficient $C$ is obtained as follows:
+
+Imagine you have $N$ alleles.  How many different ways can they be arranged?  You can choose the first allele randomly from the $N$ alleles.  The second one is chosen from $N - 1$ alleles, the third from $N - 2$ alleles, and so on.  For all $N$ alleles, we have $(N)(N-1)(N-2)...(3)(2)(1)$ possible combinations, or $N!$.
+
+Now let's imagine that we're only interested in a few of those alleles, $j$, where $j < N$.  We should divide the total number allele combinations from the number of allele combinations we are not interested in, $(N - j)!$, resulting in $N! / (N - j)!$ as the number of ways we can observe the sequence with $j$ alleles.
+
+Finally, suppose we are unconcerned with the order in which the $j$ alleles appear.  We will divide out the $j!$ ways our alleles can be arranged, leaving us with $N! / (j! (N - j)!)$ ways our final sequence can be obtained.  Hence, the full formula is:
+
+\begin{equation*}
+P(R = j; N, i) = \frac{N!}{j!(N-j)!} p^jq^{N-j}
+\end{equation*}
+
+or more simply,
+
+\begin{equation}\label{eq:binomial_distribution}
+P(R = j; N, i) = \binom{N}{j} p^j(1-p)^{N-j}
+\end{equation}
+
+where we have expressed our coefficient with the binomial coefficient syntax, often referred to as {\it N choose j}.  This is the familiar binomial distribution, and the basis for the Wright-Fisher model.
+
+\begin{marginfigure}
+<<allelecopies, echo=FALSE>>=
+i.1 = 4;
+i.2 = 10;
+i.3 = 13
+
+plot(1:N, dbinom(x=1:N, size=N, prob=i.1/N), type="l", lwd=4, col="red", bty="n", xlim=c(0, 20), ylab="Probability", xlab="Number of R alleles observed in next generation", cex=1.3, cex.lab=1.3, cex.axis=1.3);
+points(1:N, dbinom(x=1:N, size=N, prob=i.2/N), type="l", lwd=4, col="orange");
+points(1:N, dbinom(x=1:N, size=N, prob=i.3/N), type="l", lwd=4, col="brown");
+
+legend("topright", paste("i=", c(i.1, i.2, i.3), sep=""), col=c("red", "orange", "brown"), lwd=3, bty="n", cex=1.3);
+@
+\caption{The probability of observing a number of copies of allele R in the next generation given a sample size of $N$ and various initial numbers of allele R ($i$).}
+\label{fig:wg-binomdist}
+\end{marginfigure}
+
+What is the expected value of this distribution?  That is, on average, how many R alleles should we expect to see in the next generation?  This is computed as follows:
+
+\begin{align*}
+E(X) &= \sum\limits_{i=1}^k E(X_i) \\
+     &= \sum\limits_{i=1}^k x_i p(x_i) \\
+     &= \sum\limits_{i=1}^k k\binom{N}{k}p^k(1-p)^{N-k} \\
+     &= \sum\limits_{i=1}^k k\frac{N!}{k!(N-1)!}p^k(1-p)^{N-k} \\
+     &= \sum\limits_{i=1}^k \frac{N!}{(k-1)!(N-1)!}p^k(1-p)^{N-k} \\
+     &= \sum\limits_{i=1}^k Np \frac{(N-1)!}{(k-1)!(N-1)!}p^{k-1}(1-p)^{N-k} \\
+     &= Np \sum\limits_{i=1}^k \frac{(N-1)!}{(k-1)!(N-1)!}p^{k-1}(1-p)^{N-k} \\
+\end{align*}
+
+Now, let $a = k - 1$ and $b = N - 1$ (implying the lower and upper limits of our sum should go from $0$ to $b$, respectively, and that $N - k = b - a$).  Then,
+
+\begin{align*}
+E(X) &= Np \sum\limits_{a=0}^b \frac{b!}{a!(b-a)!}p^a(1-p)^{b-a} \\
+     &= Np \sum\limits_{a=0}^b \binom{b}{a}p^a(1-p)^{b-a}
+\end{align*}
+
+The sum is simply the binomial distribution summed for all possible values, that is, the probability that allele R will appear in the next generation in {\it any} amount, or a probability of 1.0.  Thus,
+
+\begin{equation}
+E(X) = Np
+\end{equation}
+
+Similarly, the variance is given by
+
+\begin{align*}
+Var(X) &= \sum\limits_{i=1}^k Var(X_i) \\
+       &= E(X^2) - E(X)^2
+\end{align*}
+
+As we've already seen, $E(X) = Np$, so $E(X)^2 = (Np)^2$.  Let's evaluate the $E(X^2)$ term:
+
+\begin{align*}
+E(X^2) &= \sum\limits_{k=0}^N k^2\binom{N}{k}p^kq^{N-k} \\
+       &= \sum\limits_{k=0}^N k^2\frac{N!}{k!(N-k)!}p^kq^{N-k} \\
+       &= \sum\limits_{k=0}^N k^2 \frac{N}{k} \frac{(N-1)!}{(k-1)!(N-k)!} p p^(k-1)q^{N-k} \\
+       &= \sum\limits_{k=0}^N kNp \binom{N-1}{k-1} p^(k-1)q^{N-k} \\
+       &= Np \sum\limits_{k=1}^N k \binom{N-1}{k-1} p^(k-1)q^{N-k} \\
+       &= Np \sum\limits_{k=1}^N k \binom{N-1}{k-1} p^(k-1)q^{(N-1) - (k-1)} \\
+       &= Np \sum\limits_{j=0}^N (j+1) \binom{m}{j} p^jq^{m-j} \\
+       &= Np (\sum\limits_{j=0}^N j \binom{m}{j} p^jq^{m-j} + \sum\limits_{j=0}^N j \binom{m}{j} p^jq^{m-j}) \\
+       &= Np (\sum\limits_{j=1}^N mp \binom{m-1}{j-1} p^{j-1}q^{m-j} + 1) \\
+       &= Np ((N-1)p \sum\limits_{j=1}^N \binom{m-1}{j-1} p^{j-1}q^{m-j} + 1) \\
+       &= Np ((N-1)p + 1) \\
+       &= N^2p^2 - Np^2 + Np \\
+       &= (Np)^2 + Np(1-p)
+\end{align*}
+
+Thus,
+
+\begin{align}
+Var(X) &= E(X^2) - E(X)^2 \notag \\
+       &= (Np)^2 + Np(1-p) - (Np)^2 \notag \\
+       &= Np(1-p)
+\end{align}
+
+What does this mean?  First, the number of copies of R should remain the same on average, but could go extinct or reach fixation in a single generation.  Over time, the frequency of R will drift randomly and eventually one of the alleles will be lost from the population.
+
+Now let's look at the rate of genetic drift over time.  We define heterozygosity $H$ as the probability that two randomly sampled gene copies are different, and homozygosity $G = 1 - H$ as the probability that two randomly sampled gene copies are the same.  Consider a population of size N and a locus with homozygosity $G_0$.  What's the expected homozygosity $G_1$ in the following generation?  When we draw our alleles, we have two options:
+
+1. The second allele is a copy of the same parent gene as the first (this will occur with probability $1/N$).
+
+
+2. The second allele is not a copy of the first parent gene (probabilty $1 - 1/N$).  They could still be equivalent alleles, however, and that probability is simply the homozygosity of the locus, $G_0$.  Therefore, we have a total probability of $G_0(1 - 1/N)$.
+
+\begin{align*}
+G_1 &= \frac{1}{N} + G_0(1 - \frac{1}{N}) \\
+    &= \frac{1}{N} + G_0 - \frac{G}{N} \\
+    &= G + \frac{1}{N}(1 - G)
+\end{align*}
+
+Now, using $H_i = 1 - G_i$, we can write,
+
+\begin{align*}
+1 - H_1 &= 1 - H_0 + \frac{1}{N}(1 - (1 - H_0)) \\
+    H_1 &= -(1 - H_0 + \frac{1}{N}(H) - 1) \\
+        &= -1 + H_0 - \frac{H}{N} + 1 \\
+        &= H(1 - \frac{1}{N})
+\end{align*}
+
+
+What about for $H_2$?
+
+\begin{align*}
+H_2 &= H_1(1 - \frac{1}{N}) \\
+    &= H_0(1 - \frac{1}{N})(1 - \frac{1}{N}) \\
+    &= H_0(1 - \frac{1}{N})^2
+\end{align*}
+
+And for $H_t$?
+
+\begin{equation}
+H_t = H_0(1 - \frac{1}{N})^t \approx H_0e^{-t/N}
+\end{equation}
+
+the final step simply being the substitution of the exponential function in place of the series in the limit where $N$ is very large.
+
+The "half-life" of the heterozygosity under drift is computed simply as:
+
+\begin{align*}
+\frac{H_t}{H_0} &= \frac{1}{2} = (1 - \frac{1}{N})^t \\
+ln(\frac{1}{2}) &= t ln(1 - \frac{1}{N}) \\
+              t &= \frac{ln(\frac{1}{2})}{ln(1 - \frac{1}{N})} \\
+                &= \frac{-ln(2)}{ln(1 - \frac{1}{N})} \\
+                &\approx \frac{-ln(2)}{-\frac{1}{N}} \\
+                &= Nln(2)
+\end{align*}
+
+\subsection{The discrete time n-coalescent treatment of the Wright-Fisher model}
+
+The Wright-Fisher model is a prospective, forward-time treatment of alleles in a population.  We can reverse this question.  How likely is it that two genes from one generation have a common ancestor in the previous generation?  The first gene chooses its parent gene freely, while the second gene is constrained to choose the exact same parent gene as the first.  It does so with probability $1/N$.  The probability of choosing a different ancestor is $1 - (1/N)$.
+
+What is the probability that two genes will find their common ancester $j$ generations back?  We'll have to choose different ancestors for the first $j-1$ generations, finding success (a common ancestor) on the $j-th$ trial.  In other words:
+
+\begin{align}
+P(T_2 = j) &= (1 - (1/N))^{j-1}(1/N) \notag \\
+           &= (1-p)^{j-1}p
+\end{align}
+
+This is the geometric distribution.  Let's compute the expected value for this distribution:
+
+\begin{align*}
+E(T) &= \sum_{i=1}^N E(X_i) \\
+     &= \sum_{i=1}^N kp(x_i) \\
+     &= \sum_{i=1}^N k(1-p)^{k-1}p
+\end{align*}
+
+Let $q = 1 - p$.  Then,
+
+\begin{align*}
+E(T) &= \sum_{i=1}^N k(1-q)q^{k-1} \\
+     &= \sum_{i=1}^N k(q^{k-1}) - \sum_{i=1}^N kq^k \\
+     &= \sum_{i=0}^N (k+1)q^k - \sum_{i=0}^N kq^k \\
+     &= \sum_{i=0}^N kq^k + \sum_{i=0}^N q^k - \sum_{i=0}^N kq^k \\
+     &= \sum_{i=0}^N q^k
+\end{align*}
+
+To evaluate this sum, we will first define $s$ as
+
+\begin{align*}
+     s &= \sum aq^k = a + aq + aq^2 + ... + aq^{N-1} \\
+    qs &= aq + aq^2 + aq^3 + ... + aq^N \\
+s - qs &= (a + aq + aq^2 + ... + aq^{N-1}) - (aq + aq^2 + ... + aq^N) \\
+       &= a - aq^N \\
+s(1-q) &= a(1-q^N) \\
+     s &= a\frac{1 - q^N}{1 - q}
+\end{align*}
+
+As $n$ tends to infinity and assuming $q < 1$, $s \rightarrow \frac{a}{1-q}$.  As $a$ in our case is $1$, we find that:
+
+\begin{equation}
+E(T) = \frac{1}{1-q} = \frac{1}{p}
+\end{equation}
+
+The variance is derived as such:
+
+\begin{align}
+Var(T) &= \sum_{i=1}^N Var(T_i) \notag \\
+       &= \sum_{i=1}^N E(T^2) - E(T)^2 \notag \\
+E(T^2) &= \sum_{i=1}^N k^2(1-p)^{k-1}p \notag \\
+       &= \sum_{i=1}^N k^2q^{k-1}p \notag \\
+       &= \sum_{i=1}^N k(k+1)pq^{k-1} - \sum_{i=1}^N kpq^{k-1} \notag \\
+       &= \sum_{i=1}^N k(k+1)pq^{k-1} - \frac{1}{p} \notag \\
+       &= \sum_{i=1}^N \frac{\partial^2}{\partial q^2} pq^{k+1} - \frac{1}{p} \notag \\
+       &= p\frac{\partial^2}{\partial q^2} \sum_{i=1}^N q^{k+1} - \frac{1}{p} \notag \\
+       &= p\frac{\partial^2}{\partial q^2}(\frac{1}{1-q} - 1 - q) - \frac{1}{p} \notag \\
+       &= p\frac{\partial}{\partial q}(-(1-q)^{-2} - 1) - \frac{1}{p} \notag \\
+       &= p(2(1-q)^{-3}) - \frac{1}{p} \notag \\
+       &= 2\frac{1-q}{(1-q)^3} - \frac{1}{p} \notag \\
+       &= 2\frac{1}{(1-q)^2} - \frac{1}{p} \notag \\
+       &= 2\frac{1}{p^2} - \frac{1}{p} \notag \\
+Var(T) &= 2\frac{1}{p^2} - \frac{1}{p} - E(T)^2 \notag \\
+       &= 2\frac{1}{p^2} - \frac{1}{p} - \frac{1}{p^2} \notag \\
+       &= \frac{1-p}{p^2}
+\end{align}
+
+The mean time for two genes to find a MRCA is:
+
+\begin{equation}\label{eq:coalescence_time_for_two_genes}
+E(T_2) = \frac{1}{p} = N \mbox{~generations}
+\end{equation}
+
+\noindent the same as the number of genes in the population.
+
+How long must we wait for $k \leq n$ genes to have less than $k$ ancestral lineages?  To compute this so-called "waiting time", we shall compute the probability that $k$ genes have $k$ different ancestors.  The first gene is selected without constraint.  Each subsequent gene must pick any gene other than one that has been previously selected.  Therefore:
+
+\begin{align}
+\left(\frac{N-1}{N}\right)\left(\frac{N-2}{N}\right)...\left(\frac{N-k+1}{N}\right) &= \prod_{i=1}^{k-1} 1 - \frac{i}{N} \notag \\
+                                                                                          &= 1 - \sum_{i=1}^{k-1} \frac{i}{N} + \mathcal{O}\left(\frac{1}{N^2}\right) \notag \\
+                                                                                          &= 1 - \frac{1}{N}\sum_{i=1}^{k-1} i + \mathcal{O}\left(\frac{1}{N^2}\right) \notag \\
+                                                                                          &= 1 - \frac{1}{N}\frac{k(k-1)}{2} + \mathcal{O}\left(\frac{1}{N^2}\right) \notag \\
+                                                                                          &= 1 - \binom{k}{2}\frac{1}{N} + \mathcal{O}\left(\frac{1}{N^2}\right)
+\end{align}
+
+To see how the binomial coefficient is obtained, observe that:
+
+\begin{align*}
+\binom{k}{2} &= \frac{k!}{2!(k-2)!} \\
+             &= \frac{k(k-1)(k-2)(k-3)...}{2(k-2)(k-3)...} \\
+             &= \frac{k(k-1)}{2}
+\end{align*}
+
+Additionally, note that we have discarded terms that fall off as fast or faster than $\mathcal{O}\left(\frac{1}{N^2}\right)$ as these terms will be negligible when $N$ is large.
+
+Thus, the probability that no coalescence event occurs is:
+
+\begin{equation}
+p(no~coalescence) = 1 - \binom{k}{2}\frac{1}{N}
+\end{equation}
+
+and the probability of a coalescence event is:
+
+\begin{equation}
+p(coalescence) = \binom{k}{2}\frac{1}{N}
+\end{equation}
+
+We can now compute the probability that two genes out of the $k$ genes find a common ancestor $T_k = j, j = 1,2,...,$ generations ago:
+
+\begin{equation}
+P(T_k = j) \approx \left(1 - \binom{k}{2}\frac{1}{N}\right)^{j-1} \binom{k}{2}\frac{1}{N}
+\end{equation}
+
+\section{Generalization to the continuous time coalescent}
+
+Now that we have introduced the discrete time n-coalescent, we are ready to generalize to continuous time such that one unit of time corresponds to the average time for two genes to find a common ancestor ($N$ generations, as previously seen).  To derive the continuous coalescent process, we let $t = j/N$, where $j$ is measured in generations.  Then, $j = Nt$ translates continuous time $t$ back into generations $j$.
+
+
+Let $t = j/N$, $p = \binom{k}{2}\frac{1}{N}$, and $a = pN$.  Then:
+
+\begin{align}
+P(T \geq j) &= (1-p)^{j-1} \notag \\
+            &= e^{-at} \notag \\
+            &= e^{-pNt} \notag \\
+            &= e^{-\binom{k}{2}t} \notag \\
+P(T \leq j) &= 1 - P(T \geq j) \notag \\
+            &= 1 - e^{-\binom{k}{2}t}
+\end{align}
+
+This is the exponential distribution, and this equation can be written in shorthand as, 
+
+\begin{equation}\label{eq:exponential_distribution}
+P(T \leq j) = Exp(\binom{k}{2})
+\end{equation}
+
+\subsection{Computing simple properties of the coalescent}
+
+Why did we compute all this?  Because certain quantities are easily derived from this formulation.  The properties that the coalescence times $T_i$ are independent of one another and that they're independent of the branching structure of the genealogy makes it straightforward to make predictions about other quantities of interest.  Chiefly among them are the time to the most recent common ancestor of the entire sample, $T_{MRCA}$, and the total length of all the branches in the genealogy, $T_{total}$.  These are easily expressed:
+
+\begin{align}
+ T_{MRCA} &= \sum_{i=2}^n T_i \\
+T_{total} &= \sum_{i=2}^n iT_i
+\end{align}
+
+where $T_i$ is the time in the history of the sample during which there were exactly $i$ ancestral lineages.  The former equation is the sum of the $n - 1$ coalescence times, and the latter is the sum of the lengths of all the branches in the genealogy broken up into the coalescence time intervals, $T_i$.  The sum starts from $2$ rather than $1$ so that we ignore the nonsense term of $T_1$, which would be the time when there was only one lineage (i.e. the original, ancestral lineage).  $T_{total}$ can be intuited by examining a coalescent tree and observing that we are simply taking the branch length of one of the members in that epoch and multiplying it by the number of members in that epoch, thus summing over all branch lengths.
+
+Recall that $T_{MRCA}$ and $T_{total}$ are functions of independent exponential random variables:
+
+\begin{equation}
+P(T_i) = Exp(\binom{k}{2}) = \binom{k}{2}e^{-\binom{k}{2}t_i}
+\end{equation}
+
+The expected value is\sidenote{Note the integration by parts}:
+
+\begin{align}
+E(T_i) &= \int_{0}^{\infty} \! xf(x) \mathrm{d}x \notag \\
+       &= \int_{0}^{\infty} \! x\lambda exp(-\lambda x) \mathrm{d}x \notag \\
+       &= -xexp(-\lambda x) \Big|_0^{\infty} + \frac{-1}{\lambda} \Big[ exp(-\lambda x) \Big]_0^{\infty} \notag \\
+       &= 0 + \frac{1}{\lambda} \notag \\
+       &= \frac{1}{\lambda}
+\end{align}
+
+The variance is:
+
+\begin{align}
+Var(T_i) &= E(T^2) - E(T)^2 \notag \\
+  E(T^2) &= \int_{0}^{\infty} \! x^2f(x) \mathrm{d}x \notag \\
+         &= \Big[x^2\lambda exp(-\lambda x)\Big]_0^{\infty} - \int_{0}^{\infty} 2x exp(-\lambda x) \mathrm{d}x \notag \\
+         &= 0 + \Big[\frac{2x}{\lambda} exp(-\lambda x)\Big]_0^{\infty} - \int_{0}^{\infty} \frac{-2}{\lambda} exp(-\lambda x) \mathrm{d}x \notag \\
+         &= 0 + 0 + \frac{2}{\lambda^2} \notag \\
+         &= \frac{2}{\lambda^2} \notag \\
+Var(T_i) &= \frac{2}{\lambda^2} - \Big(\frac{1}{\lambda}\Big)^2 \notag \\
+         &= \frac{1}{\lambda^2}
+\end{align}
+
+Filling in our values for the rate parameter, $\lambda$, we find:
+
+\begin{align}
+E(T_i) &= \frac{1}{\lambda} = \frac{2}{k(k-1)} \\
+Var(T_i) &= \frac{1}{\lambda^2} = \Big(\frac{2}{k(k-1)}\Big)^2
+\end{align}
+
+The expected value and variance of the total branch length is straightforward to compute:
+
+\begin{align}
+  E(T_{total}) &= \sum_{i=2}^{n} E(i T_i) \notag \\
+               &= \sum_{i=2}^{n} i E(T_i) \notag \\
+               &= \sum_{i=2}^{n} i\frac{2}{i(i-1)} \notag \\
+               &= 2 \sum_{i=2}^{n} \frac{1}{i-1} \notag \\
+               &= 2 \sum_{i=1}^{n-1} \frac{1}{i} \\
+Var(T_{total}) &= \sum_{i=2}^{n} Var(i T_i) \notag \\
+               &= \sum_{i=2}^{n} i^2 Var(T_i) \notag \\
+               &= \sum_{i=2}^{n} i^2 \frac{1}{\lambda^2} \notag \\
+               &= \sum_{i=2}^{n} i^2 \Big(\frac{2}{i(i-1)}\Big)^2 \notag \\
+               &= \sum_{i=2}^{n} 4\frac{1}{(i-1)^2} \notag \\
+               &= 4 \sum_{i=1}^{n-1} \frac{1}{i^2}
+\end{align}
+
+Similarly, the expected value and variance of the time to MRCA is:
+
+\begin{align}
+  E(T_{MRCA}) &= \sum_{i=2}^{n} \frac{2}{i(i-1)} \notag \\
+              &= 2 \sum_{i=2}^{n} \frac{1}{i-1} - \frac{1}{i} \notag \\
+              &= 2 (1 - \frac{1}{2} + \frac{1}{2} - \frac{1}{3} + \frac{1}{3} - \frac{1}{4} + ... - \frac{1}{n-1} + \frac{1}{n-1} - \frac{1}{n}) \notag \\
+              &= 2(1 - \frac{1}{n}) \\
+Var(T_{MRCA}) &= \sum_{i=2}^{n} Var(T_i) \notag \\
+              &= \sum_{i=2}^{n} \frac{1}{\lambda^2} \notag \\
+              &= \sum_{i=2}^{n} \Big(\frac{2}{i(i-1)}\Big)^2 \notag \\
+              &= 4 \sum_{i=2}^{n} \frac{2}{i^2(i-1)^2}
+\end{align}
+
+While $E(T_{MRCA})$, $Var(T_{MRCA})$ and $Var(T_{total})$ all converge (to $2$, $4\pi^2/3 - 12 \approx 1.16$, and $2\pi^2/3 \approx 6.58$ respectively), $E(T_{total})$ does not.  That is, as sample sizes grow, the total branch length grows indefinitely (albeit slowly).
+
+We can now derive the full probability distributions for $T_{MRCA}$ and $T_{total}$.  The distribution of $T_{MRCA}$ is the sum of $n-1$ independent exponential variables, $T_i$, with parameters $i(i-1)/2$ for $2 \le i \le n$.  Let's first derive the general result for the convolution of two exponential distributions:
+
+\begin{align}
+f_{T_1 + T_2}(t) &= \int_0^t f_{T_1}(s)f_{T_2}(t-s) \mathrm{d}s \notag \\
+                 &= \int_0^t \lambda_1 e^{-\lambda_1 s} \lambda_2 e^{-\lambda_2 (t-s)} \mathrm{d}s \notag \\
+                 &= \lambda_1\lambda_2 \int_0^t e^{-\lambda_1 s - \lambda_2 t + \lambda_2 s)} \mathrm{d}s \notag \\
+                 &= \lambda_1\lambda_2 \int_0^t e^{-\lambda_2 t} e^{(\lambda_2 - \lambda_1) s} \mathrm{d}s \notag \\
+                 &= \lambda_1\lambda_2 e^{-\lambda_2 t} \int_0^t e^{(\lambda_2 - \lambda_1) s} \mathrm{d}s \notag \\
+                 &= \lambda_1\lambda_2 e^{-\lambda_2 t} \Big[ \frac{1}{\lambda_2 - \lambda_1} e^{(\lambda_2 - \lambda_1) s} \Big]_0^t \notag \\
+                 &= \lambda_1\lambda_2 e^{-\lambda_2 t} \Big( \frac{e^{(\lambda_2 - \lambda_1) t}}{\lambda_2 - \lambda_1} - \frac{1}{\lambda_2 - \lambda_1}\Big) \notag \\
+                 &= \frac{\lambda_1\lambda_2}{\lambda_2 - \lambda_1} e^{-\lambda_2 t} (e^{(\lambda_2 - \lambda_1)t} - 1) \notag \\
+                 &= \frac{\lambda_1\lambda_2}{\lambda_1 - \lambda_2} e^{-\lambda_2 t} (1 - e^{-(\lambda_1 - \lambda_2)t}) \notag \\
+                 &= \frac{\lambda_1\lambda_2}{\lambda_1 - \lambda_2} e^{-\lambda_2 t} - \frac{\lambda_1\lambda_2}{\lambda_1 - \lambda_2} e^{-\lambda_1 t + \lambda_2 t - \lambda_2 t} \notag \\
+                 &= \frac{\lambda_1\lambda_2}{\lambda_1 - \lambda_2} e^{-\lambda_2 t} - \frac{\lambda_1\lambda_2}{\lambda_1 - \lambda_2} e^{-\lambda_1 t} \notag \\
+                 &= \frac{\lambda_1}{\lambda_1 - \lambda_2} \lambda_2 e^{-\lambda_2 t} + \frac{\lambda_2}{\lambda_2 - \lambda_1} \lambda_1 e^{-\lambda_1 t}
+\end{align}
+
+Repeating this procedure $n-1$ times to perform the convolution of a larger number of random variables yields,
+
+\begin{align}
+f_{\sum_{i=1}^{n} T_i}(t) = \sum_{i=1}^{n} \lambda_i e^{-\lambda_i t} \prod_{j=1,j \ne i}^n \frac{\lambda_j}{\lambda_j - \lambda_i}
+\end{align}
+
+Plugging in the rate parameter we found earlier for the $T_{MRCA}$, we obtain,
+
+\begin{align}
+f_{T_{MRCA}}(t) = \sum_{i=2}^{n} \binom{i}{2} e^{-\binom{i}{2} t} \prod_{j=2,j \ne i}^n \frac{\binom{j}{2}}{\binom{j}{2} - \binom{i}{2}}
+\end{align}
+
+Similarly, the distribution for $T_{total}$ is,
+
+\begin{align}
+f_{T_{total}}(t) = \sum_{i=2}^{n} \frac{i-1}{2} e^{-\frac{i-1}{2} t} \prod_{j=2,j \ne i}^n \frac{j-1}{j-i} \label{eq:t_total_convolution}.
+\end{align}
+
+% ================================================
+% Chapter: Incorporating neutral genetic variation
+% ================================================
+\chapter{Incorporating neutral genetic variation}
+\label{ch:neuvar}
+
+In the previous chapter, we concerned ourselves with gene genealogies of exact copies of genes (i.e. without variation from generation to generation).  In this chapter, we add neutral genetic variation to the mix.  Neutral mutations offer no selective advantage or disadvantage to an organism.  Thus, they do not alter the shape of a genealogy.  We can therefore model neutral mutation as a completely separate process to the genealogical process.
+
+We shall first explore the infinite sites model.  The infinite sites model assumes that there are so many sites in a genome that any time a mutation arises it affects a site that had never been affected before.
+
+\section{The infinite sites model}
+\subsection{The number of segregating sites, S}
+The number of segregating sites, $S$, in a sample of size $n$ is equal to the total number of mutations in the history of a set of samples.  At the moment, we are concerned with only neutral variation.  By definition, these have no fitness effect on the organism, and thus will not reshape gene genealogies in any way.  Thus, we assume they are simply distributed on the genealogy in some manner.  How should these mutations be distributed?
+
+One option is to model mutation as a number of successful events over a series of trials.  We've already seen such an equation when we introduced the binomial distribution in equation \eqref{eq:binomial_distribution}.  Here it is again:
+
+\begin{equation}\label{eq:binomial_distribution_revisited}
+P(X=k) = \binom{n}{k}p^k(1-p)^{n-k}
+\end{equation}
+
+\noindent where $p$ is the probability of success and $k$ is the number of successes we wish to see in $n$ trials.  In our model of neutral mutation, we can once again use the binomial distribution, but with a slight modification: we want to generalize this to continuous time.  To do so, let us first express our probability as a rate at which our events will occur.  We shall call the rate parameter $\lambda$, and define $p = \lambda/n$.  Equation \eqref{eq:binomial_distribution_revisited} now takes the form:
+
+\begin{align*}
+P(X=k) = \binom{n}{k}\Big(\frac{\lambda}{n}\Big)^k(1-\frac{\lambda}{n})^{n-k}
+\end{align*}
+
+We are interested in generalizing to very large n, so,
+
+\begin{align}
+\lim_{n \to \infty} P(X=k) &= \lim_{n \to \infty} \binom{n}{k}\Big(\frac{\lambda}{n}\Big)^k(1-\frac{\lambda}{n})^{n-k} \notag \\
+                           &= \lim_{n \to \infty} \binom{n}{k}\Big(\frac{\lambda}{n}\Big)^k\frac{(1 - \lambda/n)^n}{(1 - \lambda/n)^k} \notag \\
+                           &= \lim_{n \to \infty} \frac{n!}{(n-k)!k!}\frac{\lambda^k}{n^k}\frac{(1 - \lambda/n)^n}{(1 - \lambda/n)^k} \notag \\
+                           &= \lim_{n \to \infty} \frac{\lambda^k n!}{(n-k)!k!}\frac{(1 - \lambda/n)^n}{(n - \lambda)^k} \notag \\
+                           &= \frac{\lambda^k}{k!} \lim_{n \to \infty} \frac{(n-k+1)!}{(n - \lambda)^k} (1 - \lambda/n)^n \notag \\
+                           &= \frac{\lambda^k}{k!} \lim_{n \to \infty} \frac{(n-k+1)!}{(n - \lambda)^k} \lim_{n \to \infty} (1 - \lambda/n)^n \notag \\
+                           &= \frac{\lambda^k}{k!} (1) (e^{-\lambda/n})^n \notag \\
+                           &= \frac{\lambda^k}{k!} e^{-\lambda}
+\end{align}
+
+This is the Poisson distribution.  The limit of the first term is obtained by recognizing that $k \ll n$, while the latter limit is derived from the Taylor expansion of the exponential function:
+
+\begin{align}
+e^{x} &= 1 + x + \frac{x^2}{2!} + \frac{x^3}{3!} + \frac{x^4}{4!} - ... \\
+      &= \sum_{k=0}^{\infty} \frac{x^k}{k!}
+\end{align}
+
+As has become customary, let us compute the expected value and variance of this distribution.
+
+\begin{align}
+E(X) &= \sum_{k=1}^{\infty} k \frac{\lambda^k}{k!} e^{-\lambda} \notag \\
+     &= \sum_{k=1}^{\infty} \frac{\lambda^k}{(k-1)!} e^{-\lambda} \notag \\
+     &= e^{-\lambda} \sum_{k=1}^{\infty} \lambda \frac{\lambda^{k-1}}{(k-1)!} \notag \\
+     &= \lambda e^{-\lambda} \sum_{k=1}^{\infty} \frac{\lambda^{k-1}}{(k-1)!} \notag \\
+     &= \lambda e^{-\lambda} \sum_{j=0}^{\infty} \frac{\lambda^{j}}{j!} \notag \\
+     &= \lambda e^{-\lambda} e^{\lambda} \notag \\
+     &= \lambda
+\end{align}
+
+Similarly,
+
+\begin{align}
+Var(X) &= E(X^2) - E(X)^2 \notag \\
+E(X^2) &= \sum_{k=1}^{\infty} k^2 \frac{\lambda^k}{k!} e^{-\lambda} \notag \\
+       &= \lambda e^{-\lambda} \sum_{k=1}^{\infty} k \frac{\lambda^{k-1}}{(k-1)!} \notag \\
+       &= \lambda e^{-\lambda} (\sum_{k=1}^{\infty} (k-1) \frac{\lambda^{k-1}}{(k-1)!} + \sum_{k=1}^{\infty} \frac{\lambda^{k-1}}{(k-1)!}) \notag \\
+       &= \lambda e^{-\lambda} (\sum_{k=1}^{\infty} \frac{\lambda^{k-1}}{(k-2)!} + \sum_{k=1}^{\infty} \frac{\lambda^{k-1}}{(k-1)!}) \notag \\
+       &= \lambda e^{-\lambda} (\sum_{k=1}^{\infty} \lambda \frac{\lambda^{k-2}}{(k-2)!} + \sum_{k=1}^{\infty} \frac{\lambda^{k-1}}{(k-1)!}) \notag \\
+       &= \lambda e^{-\lambda} (\lambda e^{\lambda} + e^{\lambda}) \notag \\
+       &= \lambda^2 + \lambda \notag \\
+Var(X) &= (\lambda^2 + \lambda) - (\lambda^2) \notag \\
+       &= \lambda
+\end{align}
+
+We've successfully derived the Poisson distribution as the generalization of binomial distribution to very large $n$, and can now use this distribution to model mutations along a genelogy, provided we provide an appropriate rate parameter for the mutation process.  Let us define the population mutation rate $\theta = 2Nu$, in which $u$ is the mutation rate per generation, per locus, or per site (depending on what we're doing).  This can be interpreted as the expected number of mutations separating the sequences of two samples, since two sequences are expected to coalesce in $N$ generations (recall equation \eqref{eq:coalescence_time_for_two_genes}).  Thus, $2Nu$ mutations are expected to appear on each branch\sidenote{Come back and revisit this... the arguments here are muddled.  Particularly, we're switching definitions of the number of samples from $N$ to $2N$ rather carelessly.}.  Thus, we can write the mutation process as
+
+\begin{equation}\label{eq:poisson_mutation_process}
+P(K = k | t) = \frac{\Big(\frac{\theta t}{2}\Big)^k}{k!} e^{\frac{-\theta t}{2}}
+\end{equation}
+
+\noindent for $k = 0, 1, 2, ...$.
+
+By the way, recall equation \eqref{eq:t_total_convolution} which specified the distribution of total lengths of all the branches in the genealogy.  This equation can also be written as,
+
+\begin{equation}\label{eq:total_branch_length}
+f_{T_{total}}(t) = \sum_{i=2}^n (-1)^i \binom{n-1}{i-1}\frac{i-1}{2}e^{-\frac{i-1}{2}t} .
+\end{equation}
+
+This equivalent form will be a little bit easier to work with going forward.
+
+The marginal distribution of $S$ is the convolution of equations \eqref{eq:poisson_mutation_process} and \eqref{eq:total_branch_length}.  The derivation is:
+
+\begin{align*}
+P(S = k) &= \int_0^\infty P(S = k | t)f_{T_{total}}(t) dt \\
+         &= \int_0^\infty \frac{ \Big( \frac{\theta t}{2} \Big)^k }{k!} e^{-\frac{\theta t}{2}} \sum_{i=2}{n} (-1)^i \binom{n-1}{i-1} \frac{i-1}{2} e^{-\frac{i-1}{2}t} dt \\
+         &= \Big(\frac{\theta}{2}\Big)^k \sum_{i=2}^{n} (-1)^i \binom{n-1}{i-1} \frac{i-1}{2} \int_0^\infty \frac{t^k}{k!} e^{-\frac{\theta t}{2}} e^{-\frac{i-1}{2}t} dt \\
+         &= \Big(\frac{\theta}{2}\Big)^k \sum_{i=2}^{n} (-1)^i \binom{n-1}{i-1} \frac{i-1}{2} \int_0^\infty \frac{t^k}{k!} e^{-\frac{(\theta + i -1) t}{2}} dt \notag
+\end{align*}
+
+\noindent Evaluating just the integral (and writing the rate parameter as $\alpha = -\frac{(\theta + i - 1)t}{2}$ just to simplify the math a bit), we find:
+
+\begin{align*}
+\int_0^\infty \frac{t^k}{k!} e^{\alpha} dt &= \frac{1}{k!}(\frac{t^k}{\alpha}e^{\alpha t}\Big|_0^\infty - \int_0^{\infty} \frac{kt^{k-1}}{\alpha} e^{\alpha t} dt) \\
+                                           &= \frac{1}{k!}(\frac{t^k}{\alpha}e^{\alpha t}\Big|_0^\infty - [\frac{k}{\alpha}(\frac{t^{k-1}}{\alpha}e^{\alpha t}\Big|_0^{\infty} - \int_0^{\infty} \frac{(k-1)t^{k-2}}{\alpha} e^{\alpha t} dt)]) \\
+                                           &= \frac{1}{k!}\frac{k!}{\alpha^{k+1}} \\
+                                           &= \frac{1}{\alpha^{k+1}} \\
+                                           &= \Big(\frac{2}{\theta + i - 1}\Big)^{k+1}
+\end{align*}
+
+\noindent which we have obtained by repeated integration by parts\sidenote{Or, you know, by fudging it a little bit...}.  Putting our results together, we find,
+
+\begin{align}\label{eq:s_marginal_distribution}
+P(S = k) &= \Big(\frac{\theta}{2}\Big)^k \sum_{i=2}^n (-1)^i \binom{n-1}{i-1}\frac{i-1}{2}\Big(\frac{2}{\theta + i - 1}\Big)^{k+1} \notag \\
+         &= \sum_{i=2}^n (-1)^i \binom{n-1}{i-1}\frac{i-1}{\theta + i - 1}\Big(\frac{\theta}{\theta + i - 1}\Big)^k
+\end{align}
+
+Figure (yet to be made) shows the probability function for $n$ sequences and $k$ segregating sites with a $\theta$ of $2$.  Equation \eqref{eq:s_marginal_distribution} is the most detailed prediction we can make regarding the number of segregating sites.  The distribution of S is L-shaped along the $k$ axis when $n$ is small, favoring fewer mutations.  As $n$ grows, the distribution takes on a more Gaussian shape, peaking at just a few mutations and growing very slowly as $n$ increases.  This quantifies the random variation associated with a single sample of size $n$ from a population given a mutation parameter $\theta$.  Also, equation \eqref{eq:s_marginal_distribution} predicts what the number of segregating sites should look like if identical-sized samples are taken from independent loci that all have the same value of $\theta$.
+
+For a sample size of $2$, \eqref{eq:s_marginal_distribution} reduces to a geometric distribution with parameter $p = \theta/(\theta + 1)$.  Observe:
+
+\begin{align}\label{eq:s_marginal_distribution_as_geometric}
+P(S = k) &= \sum_{i=2}^n (-1)^i \binom{n-1}{i-1}\frac{i-1}{\theta + i - 1}\Big(\frac{\theta}{\theta + i - 1}\Big)^k \notag \\
+         &= (-1)^2 \binom{2-1}{2-1}\frac{2-1}{\theta + 2 - 1}\Big(\frac{\theta}{\theta + 2 - 1}\Big)^k \notag \\
+         &= \frac{1}{\theta + 1}\Big(\frac{\theta}{\theta + 1}\Big)^k .
+\end{align}
+
+\noindent In fact, within a larger sample the geometric distribution still applies within each coalescent interval.  This is because the neutral mutation and coalescence processes are simultaneous but independent Poisson processes with rates $i\theta / 2$ and $i(i-1)/2$ respectively.  What's the probability of one of these events occuring before the other?  Let $T_1$ and $T_2$ be the times of initial occurrence of the two events in question.  Then,
+
+\begin{align}\label{eq:prob_of_particular_event}
+P(T_1 < T_2) &= \int_0^\infty P(T_2 > t)f_{T_1}(t) dt \notag \\
+  P(T_2 > t) &= \int_t^\infty \lambda_2 e^{-\lambda_2 t} dt = e^{-\lambda t} \notag \\
+P(T_1 < T_2) &= \int_0^\infty e^{-\lambda t} \lambda_1 e^{-\lambda t} dt \notag \\
+             &= \int_0^\infty \lambda_1 e^{-(\lambda_1 + \lambda_2)t} dt \notag \\
+             &= \frac{-\lambda_1}{\lambda_1 + \lambda_2}\Big[e^{-(\lambda_1 + \lambda_2)t}\Big]_0^\infty \notag \\
+             &= \frac{-\lambda_1}{\lambda_1 + \lambda_2}(0 - 1) \notag \\
+             &= \frac{\lambda_1}{\lambda_1 + \lambda_2}
+\end{align}
+
+Using equation \eqref{eq:prob_of_particular_event}, we can write:
+
+\begin{align}
+P(coal | coal~or~mut) &= \frac{\lambda_1}{\lambda_1 + \lambda_2} = \frac{i(i-1)/2}{i\theta/2 + i(i-1)/2} = \frac{i-1}{\theta + i - 1} \label{eq:first_event_coal} \\
+ P(mut | coal~or~mut) &= \frac{\lambda_2}{\lambda_1 + \lambda_2} = \frac{i\theta/2}{i\theta/2 + i(i-1)/2} = \frac{\theta}{\theta + i - 1} \label{eq:first_event_mut}
+\end{align}
+
+Finally, the distribution of the number of segregating sites that occur during the time when there are $i$ lineages ancestral to the sample is given by,
+
+\begin{equation}
+P(S_i = k) = \Big(\frac{i-1}{\theta + i - 1}\Big)\Big(\frac{\theta}{\theta + i - 1}\Big)^k
+\end{equation}
+
+What is the expected value and variance of this distribution?  We could compute it directly, but let us introduce a technique that will serve us well later.  We shall compute $E[S]$ and $Var[S]$ by conditioning on the total tree length $T_{total}$ and expressing them in terms of $E[T_{total}]$ and $Var[T_{total}]$.  
+
+The conditioning is performed by recognizing that $P\{A\} = \sum_{i=1}^k P\{A|B_i\}P\{B_i\}$ (the reverse procedure of marginalization) and then proceeding with the following:
+
+\begin{align}
+E[Y] &= \sum_Y YP\{Y\} \notag \\
+     &= \sum_Y Y \sum_K P\{Y|K\}P\{K\} \notag \\
+     &= \sum_K E[Y|K]P\{K\} \notag \\
+     &= \sum_K K E[X_i] P\{K\} \notag \\
+     &= E[K]E[X_i]
+\end{align}
+
+\noindent Similarly, it can be shown that,
+
+\begin{align}
+Var[Y] &= E[K]Var[X_i] + Var[K]E[X_i]^2 .
+\end{align}
+
+We can now compute the expected value and variance of the distribution of segregating sites.  If $E[K]$ and $Var[K]$ are the expected value and variance of the number of mutations over 1 unit of coalescent time, then,
+
+\begin{align}
+  E[S] &= E[K]E[T_{total}] = \Big(\frac{\theta}{2}\Big)\Big(2\sum_{i=1}^{n-1}\frac{1}{i}\Big) = \theta \sum_{i=1}^{n-1} \frac{1}{i} \\
+Var[S] &= Var[K]E[T_{total}] + E[K]^2Var[T_{total}] \notag \\
+       &= \Big(\frac{\theta}{2}\Big)\Big(2\sum_{i=1}^{n-1}\frac{1}{i}\Big) + \Big(\frac{\theta}{2}\Big)^2\Big(4\sum_{i=1}^{n-1} \frac{1}{i^2}\Big) \notag \\
+       &= \theta \sum_{i=1}^{n-1} \frac{1}{i} + \theta^2 \sum_{i=1}^{n-1} \frac{1}{i^2}
+\end{align}
+
+This tells us that the number of segregating sites is proportonal to the expected total tree length, which grows like $log(n)$ when $n$ is large.  It also tells us that increasing the sample size to discover more polymorphisms does less and less good as $n$ grows because the $1/i$ terms added grow smaller and smaller in size.
+
+\subsection{Pairwise differences, $\pi$}
+
+Another measure of interest is the average number of differences between pairs of sequences in the sample, historically referred to as $\pi$\citeg{Tajima:1983uw}.  It is computed by comparing each sequence to each other sequence, counting the number of differences, and taking the average.  The full expression is:
+
+\begin{equation}\label{eq:pairwise_differences}
+\pi = \frac{1}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} k_{ij}
+\end{equation}
+
+\noindent wherein $k_ij$ is the number of differences between sequence $i$ and sequence $j$.  We can compute the expected value as:
+
+\begin{align}\label{eq:pi_expected_value}
+E[\pi] &= E\Big[\frac{1}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} k_{ij}\Big] \notag \\
+       &= \frac{1}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} E[k_{ij}] \notag \\
+       &= \frac{1}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} \frac{\theta}{2} E[2T_{ij}] \notag \\
+       &= \frac{\theta}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} E[T_{ij}]
+\end{align}
+
+\noindent where $T_{ij}$ is the coalescence time of sequence $i$ and sequence $j$.  Equation \eqref{eq:pi_expected_value} essentially says the expected number of pairwise differences is equal to the average mutation rate times the total expected lengths of lineages connecting each pair of sequences (two times their coalescence time).
+
+We can simplify this even further by evaluating the double sum over $E[T_{ij}]$.  To do so, first recognize that the members of the sample are exchangeable.  In other words, any labeling given to the samples is arbitrary and will not affect predictions about levels and patterns of mutation.  For our present scenario, this must mean that $E[T_{ij}]$ is the same for every pair of lineages.  We can then consider the expectation of $E[T_{ij}]$ to be a marginal expectation with respect to all possible histories of other members of the sample set.  Essentially, when we compute $E[T_2]$, we are implicitly averaging over all possible histories of the $N-2$ other samples in our set.  Therefore, $E[T_{ij}]$ is independent of sample size and necessarily equal to $1$.
+
+Let us prove that $E[T_{ij}] = 1$.  We shall start by conditioning on the relevant part of the genealogy of a sample of size $n$.  Sequences $i$ and $j$ might have their most recent common ancestor at any of the $n-1$ coalescent events in the history of the sample.  We will write $CE(k)$ to represent the specific coalescent event that reduces the number of ancestral lineages from $k$ to $k-1$.  We will write $MRCA(i,j)$ for the most recent common ancestor of sequences $i$ and $j$.  And so there's no confusion, remember that $i$ and $j$ represent samples, $n$ is the total number of samples, and $k$ is some epoch up the height of the tree.  We then have:
+
+\begin{equation}\label{eq:conditioned_expected_coalescence_time}
+E[T_{ij}] = \sum_{k=2}^n E[T_{ij} | MRCA(i,j) \mbox{ is at } CE(k)] P\{MRCA(i,j) \mbox{ is at } CE(k)\}.
+\end{equation}
+
+These two terms are straightforward to compute.  First, what is the expected time to coalescence between samples $i$ and $j$, given that the coalescent event between them occurs at time $k$?  Well, the branching structure of the tree is independent of the coalescence times (remember: the trees as drawn are not real, but simply a visual aid).  So then the conditional expected coalescence time is simply the sum over expected lengths of coalescent intervals.   That is:
+
+\begin{align}\label{eq:sum_over_expected_coalescent_interval_lengths}
+E[T_{ij} | MRCA(i,j)\mbox{ is at }CE(k)] &= \sum_{m=k}^n E[T_m] \notag \\
+                                         &= \sum_{m=k}^n \frac{1}{\binom{m}{2}} \notag \\
+                                         &= \sum_{m=k}^n \frac{2}{m(m-1)} \notag \\
+                                         &= 2\Big(\frac{1}{k-1} - \frac{1}{n}\Big) \notag \\
+                                         &= 2\Big(\sum_{m=k}^n \frac{1}{m-1} - \frac{1}{m}\Big) \notag \\
+                                         &= 2\Big[\Big(\frac{1}{k-1} - \frac{1}{k}\Big) + \Big(\frac{1}{k} - \frac{1}{k+1}\Big) + ... + \Big(\frac{1}{n-1} - \frac{1}{n}\Big)\Big] \notag \\
+                                         &= 2\Big(\frac{1}{k-1} - \frac{1}{n}\Big)
+\end{align} 
+
+\noindent Notice how all of the middle terms eventually cancel out, leaving us with the concise form in \eqref{eq:sum_over_expected_coalescent_interval_lengths}.  This is referred to as a "telescoping sum".
+
+Now let us evaluate the second term in equation \eqref{eq:conditioned_expected_coalescence_time}.  The probability that samples $i$ and $j$ coalesce at the $k-th$ coalescent event is the same as the probability that these samples were not involved in any preceding coalescent event and is then involved in the $k \to k - 1$ event.  Thus,
+
+\begin{align}
+P\{MRCA(i,j)\mbox{ is at }CE(k)\} &= \frac{1}{\binom{k}{2}} \prod_{l=k+1}^n \Big[1 - \frac{1}{\binom{l}{2}}\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[1 - \frac{2}{l(l-1)}\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[1 - 2\Big(\frac{1}{l-1} - \frac{1}{l}\Big)\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[1 - \frac{2}{l-1} + \frac{2}{l}\Big)\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[\frac{l(l-1) - 2}{l(l-1)}\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[\frac{l^2 - l - 2}{l(l-1)}\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[\frac{(l+1)(l-2)}{l(l-1)}\Big] \notag \\
+                                  &= \frac{2}{k(k-1)} \Big(\frac{(k+1+1)(k+1-2)}{(k+1)(k)}\Big) \times \Big(\frac{(k+2+1)(k+2-2)}{(k+2)(k+2-1)}\Big) \times ... \times \Big(\frac{(n+1)(n-2)}{(n)(n-1)}\Big) \notag \\
+                                  &= \frac{2}{k(k-1)} \Big(\frac{(k+2)(k-1)}{(k+1)(k)}\Big) \times \Big(\frac{(k+3)(k)}{(k+2)(k+1)}\Big) \times ... \times \Big(\frac{(n+1)(n-2)}{(n)(n-1)}\Big) \notag \\
+                                  &= \frac{2}{k(k+1)} \frac{n+1}{n-1}
+\end{align}
+
+Combining the two pieces, we find
+
+\begin{align}\label{eq:conditioned_expected_coalescence_time_evaluated}
+E[T_{ij}] &= \sum_{k=2}^n E[T_{ij} | MRCA(i,j) \mbox{ is at } CE(k)] P\{MRCA(i,j) \mbox{ is at } CE(k)\} \notag \\
+          &= \sum_{k=2}^n 2\Big(\frac{1}{k-1} - \frac{1}{n}\Big) \times \Big(\frac{2(n+1)}{k(k+1)(n-1)}\Big) \notag \\
+          &= 4\frac{n+1}{n-1} \sum_{k=2}^n \Big(\frac{1}{k-1} - \frac{1}{n}\Big) \frac{1}{k(k+1)} \notag \\
+          &= 4\frac{n+1}{n-1} \sum_{k=2}^n \Big(\frac{1}{k(k+1)(k-1)} - \frac{1}{nk(k+1)}\Big) \notag \\
+          &= 4\frac{n+1}{n-1} \Big( \sum_{k=2}^n \frac{1}{k(k^2 - 1)} - \frac{1}{n} \sum_{k=2}^n \frac{1}{k(k+1)} \Big) \notag \\
+          &= 4\frac{n+1}{n-1} \Big( \sum_{k=2}^n \frac{1}{k(k^2 - 1)} - \frac{1}{n} \sum_{k=2}^n \frac{1}{k} - \frac{1}{k+1} \Big) \notag \\
+          &= 4\frac{n+1}{n-1} \Big( \sum_{k=2}^n \frac{1}{k(k^2 - 1)} - \frac{1}{n} \Big[ \frac{1}{2} - \frac{1}{n+1} \Big] \Big) \notag \\
+          &= 4\frac{n+1}{n-1} \Big( \sum_{k=2}^n \frac{1}{k(k^2 - 1)} - \frac{1}{n} \frac{n-1}{2(n+1)} \Big) \notag \\
+          &= 4\frac{n+1}{n-1} \Big( \frac{(n-1)(n+2)}{4n(n+1)} - \frac{n-1}{2n(n+1)} \Big) \notag \\
+          &= 4\frac{n+1}{n-1} \Big( \frac{(n-1)(n+2)}{4n(n+1)} - \frac{2(n-1)}{4n(n+1)} \Big) \notag \\
+          &= \frac{n + 2 - 2}{n} \notag \\
+          &= 1
+\end{align}
+
+Finally, returning to equation \eqref{eq:pi_expected_value} with our evaluation of $E[T_{ij}]$, we find\sidenote{...albeit with a little hand-waving...}
+
+\begin{align}
+E[\pi] &= \frac{\theta}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} E[T_{ij}] \notag \\
+       &= \frac{2\theta}{n(n-1)} \frac{n(n-1)}{2} \notag \\
+       &= \theta
+\end{align}
+
+We can also compute the variance, which is an incredibly annoying derivation, so we'll just write the final result here:
+
+\begin{equation}
+Var[\pi] = \frac{n+1}{3(n-1)}\theta + \frac{2(n^2 + n + 3)}{9n(n-1)}\theta^2 .
+\end{equation}
+
+$\pi$ is an estimator for $\theta$, because the distribution of $\pi$ has mean of $\theta$.  This is known as Tajima's estimator of $\theta$.  The variance in this estimator can be decomposed into two terms: a "sampling variance" (reflective of sampling mutations in $n$ genes with given but unknown ancestral relationship) and an "evolutionary variance" (the stochastic nature of the genes themselves).  Even when $n$ is large, the stochastic component to the variance does not diminish greatly.  Figure \ref{fig:pi_cv} shows the coefficient of variation (CV\sidenote{{\bf CV}: square-root of variance divided by the expected value}) for $\pi$ as $n$ gets larger.  Ideally, this should converge on $0$, indicating that the estimator converges on the correct value as the sample size grows.  Instead, we see the CV converge on a much larger number ($\sqrt{1/(3\theta) + 2/9}$).  The fact that the variance does not approach zero as $n$ tends to infinity means we will get inconsistent estimates for $\theta$.
+
+\begin{figure}
+<<cvcalc, echo=FALSE>>=
+var_pi <- function(n, theta) {
+    return(((n+1)/(3*(n-1)))*theta + (2*(n^2 + n + 3)/(9*n*(n-1)))*theta^2);
+}
+
+expectation_pi <- function(n, theta) {
+    return(theta);
+}
+
+n = 1:100;
+theta = 1;
+
+cv = sqrt(var_pi(n, theta))/expectation_pi(n, theta);
+
+plot(n, cv, xlab="n", ylab="CV", bty="n", cex=1.3, cex.lab=1.3, cex.axis=1.3, ylim=c(0.5, 1.0), type="l", lty=2, lwd=3);
+@
+\caption{Coefficient of variation for $\pi$ as a function of sample size $n$ with $\theta = 1$.}
+\label{fig:pi_cv}
+\end{figure}
+
+\subsection{Site frequencies}
+
+\begin{figure}
+<<sitefreq, echo=FALSE>>=
+samples = c("A", "B", "C", "D", "E", "F", "G", "H", "I");
+
+m = matrix(0, ncol=length(samples), nrow=length(samples));
+rownames(m) = samples;
+colnames(m) = samples;
+
+# Samples that coalesce after 1 generation
+m["F", "G"] = m["G", "F"] = 1;
+
+# Samples that coalesce after 2 generations
+m["C", "D"] = m["D", "C"] = 2;
+
+# Samples that coalesce after 3 generations
+m["A", "B"] = m["B", "A"] = 3;
+
+# Samples that coalesce after 4 generations
+m["E", "F"] = m["F", "E"] = 4;
+m["E", "G"] = m["G", "E"] = 4;
+
+# Samples that coalesce after 5 generations
+m["H", "E"] = m["E", "H"] = 5;
+m["H", "F"] = m["F", "H"] = 5;
+m["H", "G"] = m["G", "H"] = 5;
+
+# Samples that coalesce after 6 generations
+m["C", "E"] = m["E", "C"] = 6;
+m["C", "F"] = m["F", "C"] = 6;
+m["C", "G"] = m["G", "C"] = 6;
+m["C", "H"] = m["H", "C"] = 6;
+m["D", "E"] = m["E", "D"] = 6;
+m["D", "F"] = m["F", "D"] = 6;
+m["D", "G"] = m["G", "D"] = 6;
+m["D", "H"] = m["H", "D"] = 6;
+
+# Samples that coalesce after 7 generations
+m["A", "C"] = m["C", "A"] = 7;
+m["A", "D"] = m["D", "A"] = 7;
+m["A", "E"] = m["E", "A"] = 7;
+m["A", "F"] = m["F", "A"] = 7;
+m["A", "G"] = m["G", "A"] = 7;
+m["A", "H"] = m["H", "A"] = 7;
+m["B", "C"] = m["C", "B"] = 7;
+m["B", "D"] = m["D", "B"] = 7;
+m["B", "E"] = m["E", "B"] = 7;
+m["B", "F"] = m["F", "B"] = 7;
+m["B", "G"] = m["G", "B"] = 7;
+m["B", "H"] = m["H", "B"] = 7;
+
+# Samples that coalesce after 8 generations
+m["I", "A"] = m["A", "I"] = 8;
+m["I", "B"] = m["B", "I"] = 8;
+m["I", "C"] = m["C", "I"] = 8;
+m["I", "D"] = m["D", "I"] = 8;
+m["I", "E"] = m["E", "I"] = 8;
+m["I", "F"] = m["F", "I"] = 8;
+m["I", "G"] = m["G", "I"] = 8;
+m["I", "H"] = m["H", "I"] = 8;
+
+h = hclust(as.dist(m));
+h$order = 1:9;
+h$labels = c("A", "A", "G", "G", "G", "G", "G", "G", "A");
+
+dh = as.dendrogram(h);
+
+plot(dh, xaxt="n", yaxt="n", type="triangle");
+axis(2, at=0.5 + 1:(length(samples)-2), labels=paste("T", (length(samples)-1):2, sep=""), lwd=0, las=1);
+axis(2, at=1:(length(samples)-1), labels=rep("", length(samples)-1), lwd=0, lwd.ticks=1, las=1, line=2, tck=0.043);
+@
+\caption{A possible coalescent tree for $9$ samples.  A mutation in the third generation leaves all subsequent branches with the G allele, while those before it retain the ancestral A allele.}
+\label{fig:coalescent_tree_with_mutation}
+\end{figure}
+
+Let us turn our attention to the site frequencies of various mutations.  First, we shall define the number of sites $\xi_i$ at which the mutant base is present in $i$ copies and the ancestral base is in $n-i$ copies in the sample.  Often we do not actually know which base is the ancestral base and which base is the mutation.  Rather than resolving that issue, we shall define the number of sites at which one base is present in $i$ copies and the other is present in $n-i$ copies as,
+
+\begin{equation}\label{eq:folded_site_freq}
+\eta_i = \frac{\xi_i + \xi_{n-i}}{1 + \delta_{i,n-i}} ,
+\end{equation}
+
+where the $\delta_{i,j}$ symbol is Kronnecker's $\delta$, equal to $0$ when $i \neq j$ and equal to $1$ when $i = j$.  Equation \eqref{eq:folded_site_freq} is referred to as the "folded" site frequency spectrum.  Since the ancestral base is generally unknown, we can think of $\eta_i$ as the number of sites at which the less frequent base is present on $i$ sequences out of $n$.
+
+We can make predictions on the site frequencies $\xi_i$ and $\eta_i$ by considering the number of mutations on appropriate branches in the genealogy.  Let $\tau_i$ be the total length of branches that have $i$ descendents in the sample.  As we saw earlier, the expected value of a Poisson distribution (by which our mutations are distributed) is simply equal to the distribution parameter.  Therefore:
+
+\begin{equation}
+E[\xi_i] = \frac{\theta}{2}E[\tau_i]
+\end{equation}
+
+Figure \ref{fig:coalescent_tree_with_mutation} gives an example of a mutation giving rise to a polymorphic site in a set of samples.  The mutant allele, G, is found in $6$ out of $9$ samples.  The mutation occured in the third generation; only branches subsequent to this can contribute to $\xi_6$.  $9$ branches contribute to $\xi_1$ (all terminal branches). $3$ branches contribute to $\xi_2$ (above the second and third samples, above the fourth and fifth samples, and about the eighth and ninth samples).  One branch each contribute to $\xi_3$ (above samples $7 - 9$), $\xi_4$ (above samples $6 - 9$), and $\xi_8$ (the right branch of the tree containing 8 samples).  No branches contribute to $\xi_5$ and $\xi_7$.  Therefore, while this particular genealogy can generate patterns $\xi_1$, $\xi_2$, $\xi_3$, $\xi_6$, $\xi_8$, it cannot generate patterns for $\xi_5$ and $\xi_7$.
+
+The genealogy in figure \ref{fig:coalescent_tree_with_mutation} is not the only possible genealogy for $9$ samples.  We must generate the expectations over all genealogies, branch lengths, and number of mutations.  Eventually this will yield
+
+\begin{equation}
+E[\tau_i] = \frac{2}{i} .
+\end{equation}
+
+\noindent To illustrate this, we shall begin with a derivation of $E[\xi_1]$, that is, the expected number of singletons in the sample.  Let us define $b_i$ to be the length of the branch leading to sequence $i$ in the sample set.  Then $\tau_1$ is equal to the sum of these.  Therefore,
+
+\begin{equation}
+E[\tau_1] = E\Big[\sum_{i=1}^n b_i\Big] = nE[b_i] .
+\end{equation}
+
+\noindent Furthermore, all of the lineages are exchangeable, meaning each $E[b_i]$ is the same for each sequence $i = 1,2,...,n$.  We can condition on the coalescent event at which lineage $i$ joins the genealogy.  Writing $FCA(i)$ for the first common ancestor event that involves lineage $i$, we find
+
+\begin{equation}
+E[b_i] = \sum_{k=2}^n E[b_i | FCA(i)\mbox{ is at }CE(k)]P\{FCA(i)\mbox{ is at }CE(k)\} .
+\end{equation}
+
+\noindent Let us compute each of the terms on the right.  First, recall that the coalescence process is a Poisson process with rate $i(i-1)/2$.  The latter term can be computed as follows:
+
+\begin{align}
+P\{FCA(i)\mbox{ is at }CE(k)\} &= \frac{k-1}{\binom{k}{2}} \prod_{j=k+1}^n \Big(1 - \frac{j - 1}{\binom{j}{2}}\Big) \notag \\
+                               &= \frac{2(k-1)}{k(k-1)} \Big[1 - \frac{2(j-1)}{j(j-1)}\Big] \notag \\
+                               &= \frac{2(k-1)}{k(k-1)} \Big[\frac{(j-2)(j-1)}{j(j-1)}\Big] \notag \\
+                               &= \frac{2(k-1)}{k(k-1)} \Big[\frac{(k+1-2)(k+1-1)}{(k+1)(k+1-1)}\frac{(k+2-2)(k+2-1)}{(k+2)(k+2-1)}...\frac{(n-2)(n-1)}{n(n-1)}\Big] \notag \\
+                               &= \frac{2(k-1)}{n(n-1)} .
+\end{align}
+
+\noindent This is the probability that a specific lineage joins the genealogy at the $k \to k-1$ coalescent event, which is equal to the probability that it does {\it not} join with any other lineages from the present time back to when there were $k$ lineages, and then the next coalescent event is between that lineage and one of the other $k-1$ lineages.  Next, we need to compute the expected length of the branch, conditional on the lineage joining the genealogy at this point.  We have already done this in equation \eqref{eq:sum_over_expected_coalescent_interval_lengths}.  It is:
+
+\begin{equation}
+E[b_i | FCA(i)\mbox{ is at }CE(k)] = 2\Big(\frac{1}{k-1} - \frac{1}{n}\Big) .
+\end{equation}
+
+\noindent We find\sidenote{Come back to this... I'm having trouble with the summation},
+
+\begin{align}
+E[b_i] &= \sum_{k=2}^n \frac{2(k-1)}{n(n-1)} 2\Big(\frac{1}{k-1} - \frac{1}{n}\Big) \notag \\
+       &= \frac{4}{n(n-1)} \sum_{k=2}^n \Big(1 - \frac{k-1}{n}\Big) \notag \\
+       &= \frac{4}{n(n-1)} \frac{n-1}{2} \notag \\
+       &= \frac{2}{n} .
+\end{align}
+
+\noindent Finally, we find,
+
+\begin{align}
+E[\tau_1] = nE[b_i] = n\frac{2}{n} = 2 .
+\end{align}
+
+\noindent Thus, the expected total length of branches that could harbor singleton mutations is $2$.  Since we know to expect $\theta / 2$ mutations per unit of time, we conclude that the expected number of singleton polymorphic sites is $E[\xi_1] = \theta$.
+
+It can be shown by similar considerations that the expected values of the unfolded site frequencies are
+
+\begin{equation}
+E[\xi_i] = \frac{\theta}{i} .
+\end{equation}
+
+\noindent Notice how the unfolded site frequencies are not dependent on the sample size $n$.  For the folded site frequencies, we have,
+
+\begin{equation}
+E[\eta_i] = \theta \frac{\frac{1}{i} + \frac{1}{n-i}}{1 + \delta_{i,n-i}}
+\end{equation}
+
+\noindent which {\it does} depend on the sample size.
+
+\section{Infinite alleles model}
+
+We now turn to the infinite alleles model, wherein every mutation introduces a new allele into the population.  We will introduce the {\it Ewens sampling formula} which gives the probabilities of allelic configurations of a sample set.  The important feature of the infinite-alleles model (as far as the coalescent is concerned) is that every copy of each allele traces back to the particular mutation event that produced it at some point in the past.  Thus the allelic states reflect the gene genealogy in a straightforward manner.
+
+To begin, let us consider the long tradition of studying population genetics with a sample size of $2$.  We shall discuss the probability of {\it identity by descent}.  This has been defined in two different ways:
+
+\begin{enumerate}
+\item the probability that a sample of size $2$ descends from a common ancestor without mutation
+\item the event that a sample of size $2$ reaches its common ancestor sometime between the present and a specified time in the past, regardless of any mutations that might have occurred
+\end{enumerate}
+
+\noindent This sounds very much like the coalescent process, and indeed, the two are intimately related.  We define IBD mathematically as,
+
+\begin{align}
+P\{IBD\} &= \sum_{i=1}^\infty (1 - u)^{2i} \Big(1 - \frac{1}{N}\Big)^i \frac{1}{N} \\
+         &= \int_0^\infty e^{-\theta t}e^{-t} dt
+\end{align}
+
+\noindent These equations give the expected value of the probability that there are no mutations between a pair of sequences over the distribution of the time to common ancestry for the pair.  In the exact form, we recognize the $(1 - \frac{1}{N})^i\frac{1}{N}$ terms to be the geometric distribution, representing the distribution of the time to common ancestor for a sample of size $2$ and parameter $1/N$.  The term $(1-u)^{2i}$ is the probability that neither sample experiences a mutation in the $i$ generations back to the common ancestor.  The $e^{-\theta t}$ is the same thing in the coalescent limit where time is measured in units of $N$ generations.
+
+The sum and integral can be evaluated to obtain:
+
+\begin{equation}
+P\{IBD\} = \frac{(1-u)^2}{Nu(2 - u) + (1 - u)^2} \approx \frac{1}{\theta + 1} .
+\end{equation}
+
+\noindent The term on the right is the result in the coalescent limit ($N \to \infty$ and $2Nu \to \theta$), and this approximation holds with $N$ is large and $u$ is small.  We obtained this result in equation \eqref{eq:first_event_coal} when we calculated the probability that the first event would be a coalescence.  This result is the same with $i = 2$.
+
+P\{IBD\} is equal to the probability that both members of a sample of size $2$ are of the same allelic type.  This can be extended to samples larger than $2$.  The result is the Ewens sampling formula:
+
+\begin{equation}\label{eq:ewens_sampling_formula}
+P\{k, a_1, a_2, ..., a_n\} = \frac{n!\theta^k}{\theta_{(n)}} \prod_{j=1}^n \frac{1}{j^{a_j}}a_j!
+\end{equation}
+
+where $\theta_{(n)} = \theta(\theta + 1)...(\theta+n-1)$ (a so-called "rising factorial").  The quantities $a_i$ are defined as follows.  Consider a sample of size $n=10$ with four alleles labeled I, II, III, and IV.  Further consider that they are found in the configuration (I, II, II, I, IV, III, I, I, I, I) among the ten samples.  Then,
+
+\begin{equation}
+(a_1, a_2, ..., a_10) = (2, 1, 0, 0, 0, 1, 0, 0, 0, 0).
+\end{equation}
+
+\noindent As we can see, each position in this configuration vector gives the counts for the number of allele classes at a given frequency.  For example, allele I is found $6$ times, hence $a_6 = 1$.  Two alleles (III and IV) are only found once each, thus $a_1 = 2$.  Note that the sum of these allele counts equals the total number of alleles in the sample,
+
+\begin{equation}
+\sum_{j=1}^n a_j = k,
+\end{equation}
+
+\noindent and that equation \eqref{eq:ewens_sampling_formula} only applies to configurations that satisfy
+
+\begin{equation}
+\sum_{j=1}^n ja_j = n .
+\end{equation}
+
+\noindent Otherwise, $P\{k, a_1, a_2, ..., a_n\} = 0$.
+
+In interpreting the assumption of infinite-alleles mutation, let us consider its relationship to the infinite-sites model without intragenic recombination.  The latter assumes that every mutation occurs at a site that has never seen mutation before, and this model typically works well where the size of the genome is very large and the per-base mutation rate is very small.  Now, an allele is a unique string of nucleotides at a locus.  This is often referred to as a haplotype.  Every mutation under the infinite sites model creates a new allele, or haplotype.  Infinite sites mutation produces infinite alleles within the coalescent framework when each lineage is followed back only to the most recent mutation event.  We can use this fact to derive a piece of the Ewens sampling formula: the distribution of the number $k$ of alleles in a sample.  We could compute the marginal distribution $P\{k\}$ by summing over all $(a_1, a_2, ..., a_n)$ that satisfy $\sum_{j=1}^n a_j = k$, but there's a more intuitive way.  Recall equations \eqref{eq:first_event_coal} and \eqref{eq:first_event_mut} that specify the probability that the first event looking back among $i$ lineages is a coalescent event or a mutation event, respectively.  Because a mutation guarantees that a lineage and all of its descendents will be a unique allelic type, we need only follow the lineages back to a mutation event.  Both mutation and coalescence have the same effect on the sample: they decrease the number of lineages by $1$.  We'll use the following algorithm to produce a random draw from $P\{k\}$:
+
+\begin{enumerate}
+\item Start with $i = n$ lineages and $k = 0$.
+\item $k \to k + 1$ with probability $\theta / (\theta + i - 1)$.
+\item Subtract $1$ lineage: $i \to i - 1$.
+\item Stop if $i = 0$, otherwise return to step $2$.
+\end{enumerate}
+
+\noindent This is like tossing a series of $n$ coins with increasing probabilities of success, in this case mutation, given by \eqref{eq:first_event_mut}.  We can make a table of the results:
+
+\begin{table}
+\footnotesize
+\begin{tabular}{llll}
+\toprule
+Pattern & Probability & Number of alleles, $k$ & $P\{k\}$ \\
+\midrule
+$1111$ & $ \frac{\theta}{\theta + 3} \frac{\theta}{\theta + 2} \frac{\theta}{\theta + 1} \frac{\theta}{\theta} $ & $4$ & $ \frac{\theta^4}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+
+$1101$ & $ \frac{\theta}{\theta + 3} \frac{\theta}{\theta + 2} \frac{1}{\theta + 1} \frac{\theta}{\theta} $ & $3$ & $ \frac{6 \theta^3}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+$1011$ & $ \frac{\theta}{\theta + 3} \frac{2}{\theta + 2} \frac{\theta}{\theta + 1} \frac{\theta}{\theta} $ & $3$ & $ \frac{6 \theta^3}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+$0111$ & $ \frac{1}{\theta + 3} \frac{\theta}{\theta + 2} \frac{\theta}{\theta + 1} \frac{\theta}{\theta} $ & $3$ & $ \frac{6 \theta^3}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+
+$1001$ & $ \frac{\theta}{\theta + 3} \frac{2}{\theta + 2} \frac{1}{\theta + 1} \frac{\theta}{\theta} $ & $2$ & $ \frac{11 \theta^2}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+$0101$ & $ \frac{3}{\theta + 3} \frac{\theta}{\theta + 2} \frac{1}{\theta + 1} \frac{\theta}{\theta} $ & $2$ & $ \frac{11 \theta^2}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+$0011$ & $ \frac{3}{\theta + 3} \frac{2}{\theta + 2} \frac{\theta}{\theta + 1} \frac{\theta}{\theta} $ & $2$ & $ \frac{11 \theta^2}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+
+$0001$ & $ \frac{3}{\theta + 3} \frac{2}{\theta + 2} \frac{1}{\theta + 1} \frac{\theta}{\theta} $ & $1$ & $ \frac{6 \theta}{(\theta + 3)(\theta + 2)(\theta + 1)\theta} $ \\ 
+\bottomrule
+\end{tabular}
+\label{tb:ewens_table}
+\caption{Possible orders of mutation and coalescent events in the $Ewens(4, \theta)$ distribution and the resultant marginal distribution $P\{k\}$.  1 = mutation, 0 = coalescence.}
+\end{table}
+
+\noindent The expected number of alleles in the sample is given by the sum of probabilities of mutation, or,
+
+\begin{equation}
+E[k] = \frac{\theta}{\theta} + \frac{\theta}{\theta + 1} + \frac{\theta}{\theta + 2} + ... + \frac{\theta}{\theta + n - 1} .
+\end{equation}
+
+\noindent Notice that if $\theta$ is very small, the expected number of alleles is $1$ plus the expected number of segregating sites (which is $\theta/2$ times the expected total length of the tree).  This makes sense: the total length of the tree represents the opportunity for mutation, and when the mutation rate is small, there will typically be only be zero or one mutation in the entire ancestry for the sample.  If there's one mutation, there's one segregating site and two alleles.
+
+\section{Deviations from the coalescent}
+
+So far we have only discussed the standard neutral model: coalescence with neutral mutation and without intragenic recombination.  From this we can make limited predictions about the shapes of genealogies and patterns of sequence polymorphism.  But of course, these predictions only hold for populations that meet certain assumptions: no selection, no changes in effective population size over time.  We will begin to explore extensions to the coalescent in the next chapter to expand the scope of problems we can treat.  However, at this point it is possible to devise a number of statistical tests to recognize data with considerably different patterns of variation from that predicted by the standard model.  Let us examine a few here:
+
+\subsection{Tests based on site frequencies}
+
+Tajima constructed a test based on the average number of pairwise differences $\pi$ and the number of segregating sites, $S$.  The idea is that since $E[\pi] = \theta$ and $E[S] = \theta a_1$ where $a_1 = \sum_{i=1}^{n-1} 1/i$, the expected value of the difference $\pi - S/a_1$ is zero under the standard neutral model.  Significant deviations from zero should cause the model to be rejected.  The test statistic is written as:
+
+\begin{equation}
+D = \frac{\pi - S/a_1}{\sqrt{\widehat{Var}[\pi - S/a_1]}}
+\end{equation}
+
+\noindent where the denominator of Tajima's $D$ is written as:
+
+\begin{equation}
+\widehat{Var}[\pi - S/a_1] = e_1 S + e_2 S(S - 1)
+\end{equation}
+
+\noindent and $e_1$ and $e_2$ are given by
+
+\begin{align}
+e_1 &= \frac{1}{a_1} \Big(\frac{n+1}{3(n-1)} - \frac{1}{a_1}\Big) \\
+e_2 &= \frac{1}{a_1^2 + a_2} \Big(\frac{2(n^2 + n + 3)}{9n(n-1)} - \frac{n+2}{na_1} + \frac{a_2}{a_1^2}\Big) ,
+\end{align}
+
+and $a_2 = \sum_{i=1}^{n-1} 1/i^2$.  The denominator is an attempt to normalize for the effect of sample size on the critical values.
+
+As with any statistical test, it is necessary to specify a significance level $\alpha$ which represents the acceptability of rejecting the null model just by chance when it is true.  Roughly, values of Tajmia's $D$ (and the other tests that we will discuss shortly) are significant at the $5\%$ level ($\alpha = 0.05$) if they are greater than $2$ or less than $-2$.
+
+Other related tests are those specified by Fu and Li:
+
+\begin{align}
+D^* &= \frac{S/a_1 - \frac{n-1}{n}\eta_1}{\sqrt{\widehat{Var}[S/a_1 - \frac{n-1}{n}\eta_1]}} \\
+F^* &= \frac{\pi - \frac{n-1}{n}\eta_1}{\sqrt{\widehat{Var}[\pi - \frac{n-1}{n}\eta_1]}}
+\end{align}
+
+\noindent where $\eta_1$ is the number of singletons in the folded site-frequency spectrum.  The tests are based on the same intuition as Tajima's $D$: that significant deviation from the standard model in terms of the number and pattern of observed polymorphisms can be the basis of a test.
+
+What exactly do these tests {\it test}?  Ostensibly, they test for neutrality, but with all the assumptions that go into the coalescent, a statistically significant difference cannot be purely a statement about natural selection.
+
+\subsection{Demographic history and patterns of polymorphism}
+
+Let us look at how some nonselective deviations from the standard model would alter the site frequency spectrum and cause $D$, $D^*$, and $F^*$ to deviate from the "neutral" prediction of zero.
+
+\begin{figure}
+\includegraphics{{wakeley_fig4.8}.pdf}
+\caption{Four different neutral demographic histories on patterns of sequence polymorphism.  Reprinted from Wakeley, 2009.}
+\label{tb:neutral_demos}
+\end{figure}
+
+Figure \ref{tb:neutral_demos} shows four different neutral demographic histories and their effects on patterns of polymorphisms.  Scenario (a) demonstrates the effects of population growth.  As we move back in time, the lineages encounter an ancestral population much smaller than the current population.  As a result of this rapid expansion, there's an excess of low-frequency mutation (imagine low-frequency mutations already present in the ancestral population, and then having those samples cloned very quickly).  The lineages coalesce on a longer time scale in the recent past, so there will be very few coalescent events between the present and the time the growth occurred.  Once back in the ancestral population, the effective size drops and the coalescent time scale shortens.
+
+Scenario (b) is population decline, in which the current population is much smaller than the ancestral population.  This is effectively the inverse of scenario (a).  We should expect to see an increase of mid-frequency mutations.  (a) and (b) will have opposite effects on $D$, $D^*$, and $F^*$, with the former tending to make these quantites negative, and the latter making them positive.
+
+Scenarios (c) and (d) describe two different kinds of population subdivision.  (c) shows equilibrium migration with limited gene flow.  (d) shows isolation without gene flow.  While the lineages were exchangeable in (a) and (b), this is not the case in (c) and (d).  Both scenarios will contribute to an excess of middle-frequency SNPs.  The former will be characterized by a large $Var[S]$, the latter a small $Var[S]$.
+
+% ==================================
+% Chapter: The Structured Coalescent
+% ==================================
+\chapter{The Structured Coalescent}
+\label{ch:strcoal}
+
+We now turn our attention to an extension of the standard coalescent model that deals with populations structure.  We will develop the theory of Markov chains, and this tool will be used repeatedly in chapters to come.  Markov chains will enable us to study ancestral processes in which lineages are not exchangeable and provide a general framework for setting up and evaluating recursive functions.
+
+\section{Markov processes}
+Consider again the probability of identity by descent (IBD):
+
+\begin{equation}
+F_t = (1-u)^2 \Big(\frac{1}{N} + \Big(1 - \frac{1}{N}\Big)F_{t-1}\Big) .
+\end{equation}
+
+\noindent This specifies the probability of IBD in generation $t$ in terms of the same probability in the previous generation with mutation rate $u$ at the locus.  In words, this equation states that two sequences are IBD if neither of them mutates (probability $(1 - u)^2$) and either (1) they have the same parent in the previous generation (probability $1/N$) or (2) they have different parents (probability $1 - 1/N$) and their parents are IBD (probability $F_{t-1}$).
+
+As we can see, this is a recursive function.  The results at $F_t$ are dependent on $F_{t-1}$.  We can model this equation (and equations like it) as a Markov process.  A discrete-time Markov process (or Markov chain), is a stochastic process represented by $\{X_t, t = 0, 1, 2, ...\}$, where $X_t$ is the state of the process at time $t$.  Each Markov process has a {\it state space}, that is, the collection of all possible states for the process.  For now, we shall assume the state space is finite and can be represented with the set $\{1, 2, ..., n\}$ with $n$ possible states.  Thus, the full Markov process is the specific series of states at times $t = 0, 1, 2, ...$.
+
+The central feature of a Markov process is the so-called {\it Markov property}, which states that the probability of moving from one state to another depends only on the current state (not on any other, and not on time).  Specifically,
+
+\begin{equation}
+P\{X_{t+1} = j | X_t = i, X_{t-1} = x_{t-1}, ..., X_0 = x_0\} = P\{X_{t+1} = j|X_t = i\} = P_{ij}
+\end{equation}
+
+\noindent for all $j, i, x_{t-1}, ..., x_0$ and for all $t$.
+
+The state space of a Markov process represents every possible state that the process can occupy.  We can collect all of these {\it transition probabilities} $P_{ij}$ in a matrix, like so:
+
+\begin{equation}
+\mathbf{P} = 
+\begin{bmatrix}
+    P_{11} & P_{12} & ... & P_{1n} \\
+    P_{21} & P_{22} & ... & P_{2n} \\
+    \vdots & \vdots &     & \vdots \\
+    P_{n1} & P_{n2} & ... & P_{nn}
+\end{bmatrix}
+\end{equation}
+
+\noindent and of course, the probabilities in each row sum to $1$ for all $i$:
+
+\begin{equation}
+\sum_{j=1}^n P_{ij} = 1 .
+\end{equation}
+
+\noindent As an example (albeit an incredibly simple one), we can specify the transition matrix of a series of coin tosses or Bernoulli trials:
+
+\begin{equation}
+\mathbf{P} = 
+\begin{bmatrix}
+    1 - p & p \\
+    1 - p & p
+\end{bmatrix}
+\label{eq:bernoulli_matrix}
+\end{equation}
+
+\noindent where state $1$ is tails (or failure) and state $2$ is heads (or success).
+
+We will rely heavily on matrix methods to analyze Markov chains.  Specifically, recall matrix multiplication of $m$ by $n$ matrix $\mathbf{A}$ and $n$ by $r$ matrix $\mathbf{B}$.  When $\mathbf{A}$ is multiplied on the right by $\mathbf{B}$, the result is a $m$ by $r$ matrix whose $(i,j)$th entry is computed by taking the $i$th row of $\mathbf{A}$ and the $j$th column of $B$, multiplying the entires of these two vectors in succession and adding them together.  For example,
+
+\begin{equation}
+\begin{bmatrix}
+a_{11} & a{12} \\
+a_{21} & a{22} \\
+a_{31} & a{32}
+\end{bmatrix}
+\begin{bmatrix}
+b_{11} & b_{12} \\
+b_{21} & b_{22} \\
+\end{bmatrix}
+=
+\begin{bmatrix}
+a_{11}b_{11} + a_{12}b_{21} & a_{11}b_{12} + a_{12}b_{22} \\
+a_{21}b_{11} + a_{22}b_{21} & a_{21}b_{12} + a_{22}b_{22} \\
+a_{31}b_{11} + a_{32}b_{21} & a_{31}b_{12} + a_{32}b_{22}
+\end{bmatrix} .
+\end{equation}
+
+Let us use this Markov process formulation to make some predictions about the state of the process at some later time $t$, given an initial state $i$.  We will compute $P_{ij}^{(t)}$, that is, the probability that the process is in state $j$ after $t$ steps, given that is is in state $i$ at the start.  Remember that since this is a Markov process, none of the previous states matter.  Thus,
+
+\begin{equation}
+P_{ij}^{(t)} = P\{X_{t+s}=j|X_s=i\}
+\end{equation}
+
+\noindent for all $t$, $i$, and $j$ (but not $s$).  The transition probabilities for $t=1$ are the entries of the matrix $\mathbf{P}$.  For $t=2$ we have
+
+\begin{equation}
+P_{ij}^{(2)} = \sum_{k=1}^n P_{ik}P_{kj}
+\end{equation}
+
+\noindent for all $i$ and $j$.  In general,
+
+\begin{equation}
+P_{ij}^{(t+s)} = \sum_{k=1}^n P_{ij}^{(t)}P_{kj}^{(s)}
+\end{equation}
+
+\noindent and in matrix notation,
+
+\begin{equation}
+\mathbf{P}^{(t+s)} = \mathbf{P}^{(t)}\mathbf{P}^{(s)} .
+\end{equation}
+
+\noindent These last two equations are referred to as the Chapman-Komolgorov equations.  Finally, we have,
+
+\begin{equation}
+\mathbf{P}^{(t)} = \mathbf{P}^t,
+\end{equation}
+
+\noindent which states that the $t$-step transition matrix is equal to $\mathbf{P}$ raised to the power of $t$.  Thus, the probability $P_{ij}^{(t)}$ that the chain is in state $j$ after $t$ time steps, given that it started in state $i$, is equal to the $(i,j)$th entry of $\mathbf{P}^t$.
+
+Let's consider a numerical example: the two-state Markov process with transition matrix
+
+\begin{equation}
+\begin{bmatrix}
+0.90 & 0.10 \\
+0.25 & 0.75
+\end{bmatrix}.
+\end{equation}
+
+\noindent After two steps, we have,
+
+\begin{equation}
+\begin{bmatrix}
+0.90 & 0.10 \\
+0.25 & 0.75
+\end{bmatrix}^2
+=
+\begin{bmatrix}
+0.835 & 0.165 \\
+0.412 & 0.588
+\end{bmatrix} .
+\end{equation}
+
+\noindent After five steps,
+
+\begin{equation}
+\begin{bmatrix}
+0.90 & 0.10 \\
+0.25 & 0.75
+\end{bmatrix}^5
+=
+\begin{bmatrix}
+0.747 & 0.253 \\
+0.631 & 0.369
+\end{bmatrix} .
+\end{equation}
+
+\noindent It is interesting that even after $5$ iterations, the probability of being in state $1$ is so high, regardless of the initial state.  The equation above says that there is a $63\%$ chance of being in state $1$ after five steps given that the process began in state $2$.    This may seem odd since according to the initial matrix there's a $75\%$ chance of staying in state 2 once reaching it.  However, the $90\%$ change of staying in state 1 after reaching it is much stronger.  Furthermore, after $20$ steps we find,
+
+\begin{equation}
+\begin{bmatrix}
+0.90 & 0.10 \\
+0.25 & 0.75
+\end{bmatrix}^20
+=
+\begin{bmatrix}
+0.7143 & 0.2857 \\
+0.7142 & 0.2858
+\end{bmatrix} .
+\end{equation}
+
+\noindent At this point, the process looks almost memoryless (it no longer matters what the prior state was).  This matrix is similar in structure to \eqref{eq:bernoulli_matrix}.
+
+\subsection{Classification of states and limiting behavior}
+Most Markov processes belong to one of two different states: absorbing and transient.  An absorbing state is one that, once entered, is never left (i.e. $P_{ii} = 1$ and $P_{ij} = 0$).  A transient state is one that, once entered, will be left eventually.  If the process has one or more absorbing states, it's easy to see that the probability of the Markov chain remaining in one of the transient states after $t$ steps decreases to zero as $t$ goes to infinity.  Other interesting things can happen.  We will encounter {\it ergodic} Markov chains, where it is possible to get from any state to any other state given enough time (these are often referred to as "recurrent" states).  It's also possible that the process gets trapped in some set of states, but continues to transition between them.
+
+Let's look at the long-term behavior of a Markov process by examining $\lim_{t \to \infty} \mathbf{P}^t$.  We shall find different results depending on the presence of absorbing states.  We'll first illustrate the results for an ergodic chain described, for example, by \eqref{eq:bernoulli_matrix} (a process with two recurrent and zero absorbing states).  Here, $\mathbf{P}^2 = \mathbf{P}$, thus $\lim_{t \to \infty} \mathbf{P}^t = \mathbf{P}$.  In general, the matrix for an ergodic Markov chain with $n$ states will look like
+
+\begin{equation}
+\lim_{t \to \infty} \mathbf{P}^t =
+\begin{bmatrix}
+\nu_1 & \nu_2 & \cdots & \nu_n \\
+\nu_1 & \nu_2 & \cdots & \nu_n \\
+\vdots & \vdots & & \vdots \\
+\nu_1 & \nu_2 & \cdots & \nu_n
+\end{bmatrix}.
+\end{equation}
+
+\noindent This means that after enough time has elapsed, the probability of being in state $i$ no longer depends on the starting state.  The $\nu_i$ terms represent the long-term probability that the process is in state $i$ (or the fraction of time spent in that state).
+
+Equation \eqref{eq:bernoulli_matrix} has the special property that every row is identical.  In cases like this, we need not know $\mathbf{P}^t$ explicitly in order to compute the limiting matrix.  Rather, we can represent a single row of the limiting matrix using a vector $\mathbf{\nu} = (\nu_1, \nu_2, \ldots, \nu_n)$.  We can then solve the equation $\mathbf{\nu} = \mathbf{\nu}\mathbf{P}$, or equivalently,
+
+\begin{equation}
+\nu_i = \sum_{j=1}^n \nu_j P_{ij}
+\end{equation}
+
+\noindent Additionally, we place a constraint that,
+
+\begin{equation}
+\sum_{i=1}^n \nu_i = 1 .
+\end{equation}
+
+\noindent This faciliates a probabilistic interpretation of the terms.  This vector is often called the equilibrium of the process.  Note that we have made the assumption that the same transition probabilities apply for all times.
+
+Given a Markov chain with absorbing states, the probability of being in any of the transient states will be zero as $t$ tends to infinity.  For example, consider the following three-state Markov chain with two absorbing states and transition matrix,
+
+\begin{equation}
+\mathbf{P} = 
+\begin{bmatrix}
+1      & 0                   & 0      \\
+p_{21} & 1 - p_{21} - p_{23} & p_{23} \\
+0      & 0                   & 1      \\
+\end{bmatrix}
+\end{equation}
+
+\noindent Multiplying this matrix by itself $t$ times, we find,
+
+\begin{equation}
+\mathbf{P} = 
+\begin{bmatrix}
+1      & 0                   & 0      \\
+\sum_{i=0}^{t-1} (1 - p_{21} - p_{23})^i p_{21} & (1 - p_{21} - p_{23})^t & \sum_{i=0}^{t-1} (1 - p_{21} - p_{23})^i p_{23} \\
+0      & 0                   & 1      \\
+\end{bmatrix}.
+\end{equation}
+
+\noindent The limiting matrix is,
+
+\begin{equation}
+\mathbf{P} = 
+\begin{bmatrix}
+1      & 0                   & 0      \\
+\frac{p_{21}}{p_{21} + p_{23}} & 0 & \frac{p_{21}}{p_{21} + p_{23}} \\
+0      & 0                   & 1      \\
+\end{bmatrix}.
+\end{equation}
+
+\section{Continuous-time approximations and jump chains}
+
+Although we did not say it before, we can now call Kingman's coalescent a continuous-time Markov process that exists in the limit of large population size.  Here we'll develop the theory of continuous-time approximations to the discrete-time Markov chains.  This will be necessary for understanding the structured coalescent.  Excitingly, we'll see the matrix version of the limits in the previous chapters that produced the exponential and Poisson distributions from the geometric and binomial distributions.
+
+First, recall the identity matrix $\mathbf{I}$, a square ($n$ by $n$) matrix with $1$'s on the diagonal and $0$'s elsewhere.  We can write our Markov transition matrix $\mathbf{P}$ as the sum of $\mathbf{P} = \mathbf{I} + \mathbf{A}$.  The off-diagonal elements of $\mathbf{A}$ are the probabilities of transition from a current state to a next state ($a_{ij} = p_{ij}$ for $i \neq j$).  The diagonal elements are negative (or zero in the case of an absorbing state) and are equal to $a_{ii} = \sum_{j \neq i} a_{ij}$.  These elements are given by $a_{ii} = -\sum_{j \neq i} a_{ij}$. 
+
+We shall focus on situations where $a_{ij}$ is close to zero and all $a_{ij}$ terms are of the same order of magnitude.  In this scenario, we can define a single time scale $N_a$ that is proportional to the expected times $-1/a_{ii}$ between changes in state.  In the limit as $a_{ij}$ tends to zero (and thus $N_a$ tends to infinity), we find
+
+\begin{equation}
+\mathbf{P}^{[N_a t]} = (\mathbf{I} + \mathbf{A})^{[N_a t]} \to e^{tQ}
+\end{equation}
+
+\noindent where the rate matrix $\mathbf{Q}$ is the limit of the product $N_a \mathbf{A}$ (a matrix whose ($i$, $j$)th entry is equal to $N_a a_{ij}$.
+
+Let us discuss an example.  Consider the single-step transition matrix
+
+\begin{equation}
+\mathbf{P} =
+\begin{bmatrix}
+1 - p_{12} - p_{13} & p_{12}              & p_{13} \\
+p_{21}              & 1 - p_{21} - p_{23} & p_{23} \\
+0                   & 0                   & 1 \\
+\end{bmatrix}.
+\end{equation}
+
+This is a discrete-time Markov process with three states, one of which is an absorbing state.  Assume a continuous-time approximation with rate matrix $\mathbf{Q}$ is valid and the process starts in state 1 at time $t = 0$.  This corresponds to a Poisson process.  To demonstrate this, we will introduce parameters $\lambda_1$, $\lambda_2$, and $\lambda_3$ where $\lambda_i = -q_{ii} = \sum_{j \neq i} q_{ij}$.  Thus, $\lambda_i$ is the total rate of events by which the system can leave state $i$.  The waiting time for one of these events is exponentially distributed with parameter $\lambda_i$, which is equivalent to the amount of time spent in state $i$ each time that state is entered.  Thus, the process of leaving any particular transient state can be modelled as a Poisson process.  After this exponential waiting time in state $1$, an event will occur and the chain will jump to state $2$ or $3$.
+
+Recall equation \eqref{eq:prob_of_particular_event} which gives the probability that the first event in a Poisson distribution is of a particular type.  We know that the probabilities of movement to each possible next state in the chain are the relative probabilities of moving to each possible state.  We can model a {\it jump chain} by allowing for the exponentially distributed holding times.  This matrix is written as:
+
+\begin{equation}
+\mathbf{P^*} = 
+\begin{bmatrix}
+0                              & \frac{q_{12}}{q_{12} + q_{13}} & \frac{q_{13}}{q_{12} + q_{13}} \\
+\frac{q_{21}}{q_{21} + q_{23}} & 0                              & \frac{q_{23}}{q_{21} + q_{23}} \\
+0                              & 0                              & 1                              \\
+\end{bmatrix}
+= 
+\begin{bmatrix}
+0                              & \frac{p_{12}}{p_{12} + p_{13}} & \frac{p_{13}}{p_{12} + p_{13}} \\
+\frac{p_{21}}{p_{21} + p_{23}} & 0                              & \frac{p_{23}}{p_{21} + p_{23}} \\
+0                              & 0                              & 1                              \\
+\end{bmatrix}
+\end{equation}
+
+
+
+% =====================
+% Chapter: bibliography
+% =====================
+\bibliography{/Users/kiran/Documents/allpapers}
+\bibliographystyle{plainnat}
+
+\end{document}
