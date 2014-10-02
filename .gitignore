@@ -1,1 +1,13 @@
 scratch/
+*.aux
+*.bbl
+*.blg
+*.idx
+*.lof
+*.log
+*.lot
+*.out
+*.pdf
+*.tex
+*.toc
+texput.log
