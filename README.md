@@ -1,7 +1,7 @@
 Coalescent theory: a pedantic dissection
 ========================================
 
-This book contains my notes on coalescent theory, sourced primarily from __Coalescent Theory: An Introduction__ and __Gene Genealogies, Variation and Evolution__. While those textbooks often expect a certain familiarity with combinatorics and statistics, this one does not. These are my notes on the subject, and I can be incredibly pedantic. Thus, you’ll often find complete derivations here for things you might already know how to derive fairly easily (or might not have cared to in the first place).
+This book contains my notes on coalescent theory, sourced primarily from _Coalescent Theory: An Introduction_ and _Gene Genealogies, Variation and Evolution_. While those textbooks often expect a certain familiarity with combinatorics and statistics, this one does not. These are my notes on the subject, and I can be incredibly pedantic. Thus, you’ll often find complete derivations here for things you might already know how to derive fairly easily (or might not have cared to in the first place).
 
 Prerequisites
 -------------
