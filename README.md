@@ -15,6 +15,9 @@ To compile this book, you'll need the following:
 
 Compilation
 -----------
+```
+sudo Rscript -e "install.packages(c('knitr','stringr'), repos='http://cran.rstudio.com/')"
+```
 
 To compile this book, simply type `make` in the root directory of the repository.
 
