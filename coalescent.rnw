@@ -126,20 +126,20 @@ The Wright-Fisher model places some constraints on this problem:
 
 We shall model reproduction as sampling with replacement.  That is, we choose a sample from the current generation at random.  This sample clones itself, and the clone becomes a member of the next generation.  We repeat this process $N$ times (as we have assumed the population size is constant).  The sample sample may be chosen multiple times, while other samples might not be chosen at all.  Finally, after all iterations are complete, members of the current generation die and we are left with only the next generation.
 
-What is the probability that an allele with $i$ copies in the present generation is found in $j$ copies in the next?  Let us imagine ourselves as selecting the alleles from generation 0 out of an opaque bag filled with colored balls.  Red balls represent allele R, while blue represents allele b.  We shall start with $j = 1$, that is, that we should only expect to see our sought allele one time in the next generation.  We will vary $N$ and $i$ for the purposes of elucidating the model.  Should there only be $i = 1$ red ball in the bag (thus, $N = 1$ as well), computing the probability that allele A will appear in the next generation ($j = 1$) is trivial: it is $1$.  Two balls, one of each color?  Well, $N = 2$, $i = 1$, and $j = 1$.  The probability of observing a single red ball in the next generation can be produced two different ways.  Either then red ball can be chosen during the first round or the second.  The probability of choosing the red ball is:
+What is the probability that an allele with $i$ copies in the present generation is found in $j$ copies in the next?  Let us imagine ourselves as selecting the alleles from generation 0 out of an opaque bag filled with colored balls.  Red balls represent allele R, while blue represents allele b.  We shall start with $j = 1$, that is, that we should only expect to see our sought allele one time in the next generation.  We will vary $N$ and $i$ for the purposes of elucidating the model.  Should there only be $i = 1$ red ball in the bag (thus, $N = 1$ as well), computing the probability that allele A will appear in the next generation ($j = 1$) is trivial: it is $1$.  Two balls, one of each color?  Well, $N = 2$, $i = 1$, and $j = 1$.  The probability of observing a single red ball in the next generation can be produced two different ways.  Either then red ball can be chosen during the first round or the second.  The probability of the {\it event} that choosing a red ball is:
 
 \begin{align*}
-P(ball = red) &= i/N \\
-              &= p
+P( {\rm choosing\ the\ a\ ball } ) &= i/N \\
+                                   &= p
 \end{align*}
 
-while the probability we'll choose a blue ball is:
+while the probability of the event that we'll choose a blue ball is:
 
 \begin{align*}
-P(ball = blue) &= (N - i)/N \\
-               &= N/N - i/N \\
-               &= 1 - p \\
-               &= q
+P( {\rm choosing\ the\ a\ ball } ) &= (N - i)/N \\
+                                   &= N/N - i/N \\
+                                   &= 1 - p \\
+                                   &= q
 \end{align*}
 
 There are two ways of generating the observed sequence (Rb or bR) and the probability of producing them is $pq$ and $qp$, respectively.  Thus, the total probability for observing allele R in the next generation is $pq + qp = 2pq$.
