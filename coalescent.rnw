@@ -16,7 +16,7 @@
 
 % Book metadata
 \title{Coalescent theory: a pedantic dissection}
-\author[Kiran V Garimella, Maurice Schroff]{Kiran V Garimella, Maurice Schroff}
+\author[Kiran V Garimella, Maurice Schroff, Sha Zhu]{Kiran V Garimella, Maurice Schroff, Sha Zhu}
 \publisher{Wellcome Trust Centre for Human Genetics}
 \makeindex
 
