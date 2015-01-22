@@ -1,6 +1,11 @@
 \documentclass[justified,nols]{tufte-book}
 
 % =================
+% Include packages
+% =================
+\usepackage{todonotes}
+
+% =================
 % Macro definitions
 % =================
 %\newcommand{\gene}[1]{\verb{$#1$}}
@@ -459,9 +464,10 @@ P(T \leq j) = Exp(\binom{k}{2})
 
 Why did we compute all this?  Because certain quantities are easily derived from this formulation.  The properties that the coalescence times $T_i$ are independent of one another and that they're independent of the branching structure of the genealogy makes it straightforward to make predictions about other quantities of interest.  Chiefly among them are the time to the most recent common ancestor of the entire sample, $T_{MRCA}$, and the total length of all the branches in the genealogy, $T_{total}$.  These are easily expressed:
 
+\todo{wakeley eq. 3.21, 3.22}
 \begin{align}
- T_{MRCA} &= \sum_{i=2}^n T_i \\
-T_{total} &= \sum_{i=2}^n iT_i
+ T_{MRCA} &= \sum_{i=2}^n T_i \label{eqn:Tmrca}\\
+T_{total} &= \sum_{i=2}^n iT_i \label{eqn:Ttotal}
 \end{align}
 
 where $T_i$ is the time in the history of the sample during which there were exactly $i$ ancestral lineages.  The former equation is the sum of the $n - 1$ coalescence times, and the latter is the sum of the lengths of all the branches in the genealogy broken up into the coalescence time intervals, $T_i$.  The sum starts from $2$ rather than $1$ so that we ignore the nonsense term of $T_1$, which would be the time when there was only one lineage (i.e. the original, ancestral lineage).  $T_{total}$ can be intuited by examining a coalescent tree and observing that we are simply taking the branch length of one of the members in that epoch and multiplying it by the number of members in that epoch, thus summing over all branch lengths.
@@ -504,12 +510,17 @@ Var(T_i) &= \frac{1}{\lambda^2} = \Big(\frac{2}{k(k-1)}\Big)^2
 
 The expected value and variance of the total branch length is straightforward to compute:
 
+\todo{wakeley eq. 3.23}
 \begin{align}
   E(T_{total}) &= \sum_{i=2}^{n} E(i T_i) \notag \\
                &= \sum_{i=2}^{n} i E(T_i) \notag \\
                &= \sum_{i=2}^{n} i\frac{2}{i(i-1)} \notag \\
                &= 2 \sum_{i=2}^{n} \frac{1}{i-1} \notag \\
-               &= 2 \sum_{i=1}^{n-1} \frac{1}{i} \\
+               &= 2 \sum_{i=1}^{n-1} \frac{1}{i} 
+\end{align}
+
+\todo{wakeley eq. 3.25}
+\begin{align}
 Var(T_{total}) &= \sum_{i=2}^{n} Var(i T_i) \notag \\
                &= \sum_{i=2}^{n} i^2 Var(T_i) \notag \\
                &= \sum_{i=2}^{n} i^2 \frac{1}{\lambda^2} \notag \\
@@ -520,11 +531,16 @@ Var(T_{total}) &= \sum_{i=2}^{n} Var(i T_i) \notag \\
 
 Similarly, the expected value and variance of the time to MRCA is:
 
+\todo{wakeley eq. 3.24}
 \begin{align}
   E(T_{MRCA}) &= \sum_{i=2}^{n} \frac{2}{i(i-1)} \notag \\
               &= 2 \sum_{i=2}^{n} \frac{1}{i-1} - \frac{1}{i} \notag \\
               &= 2 (1 - \frac{1}{2} + \frac{1}{2} - \frac{1}{3} + \frac{1}{3} - \frac{1}{4} + ... - \frac{1}{n-1} + \frac{1}{n-1} - \frac{1}{n}) \notag \\
-              &= 2(1 - \frac{1}{n}) \\
+              &= 2(1 - \frac{1}{n}) 
+\end{align}
+
+\todo{wakeley eq. 3.26}
+\begin{align}
 Var(T_{MRCA}) &= \sum_{i=2}^{n} Var(T_i) \notag \\
               &= \sum_{i=2}^{n} \frac{1}{\lambda^2} \notag \\
               &= \sum_{i=2}^{n} \Big(\frac{2}{i(i-1)}\Big)^2 \notag \\
@@ -535,6 +551,7 @@ While $E(T_{MRCA})$, $Var(T_{MRCA})$ and $Var(T_{total})$ all converge (to $2$, 
 
 We can now derive the full probability distributions for $T_{MRCA}$ and $T_{total}$.  The distribution of $T_{MRCA}$ is the sum of $n-1$ independent exponential variables, $T_i$, with parameters $i(i-1)/2$ for $2 \le i \le n$.  Let's first derive the general result for the convolution of two exponential distributions:
 
+\todo{wakeley eq. 2.63}
 \begin{align}
 f_{T_1 + T_2}(t) &= \int_0^t f_{T_1}(s)f_{T_2}(t-s) \mathrm{d}s \notag \\
                  &= \int_0^t \lambda_1 e^{-\lambda_1 s} \lambda_2 e^{-\lambda_2 (t-s)} \mathrm{d}s \notag \\
@@ -552,21 +569,29 @@ f_{T_1 + T_2}(t) &= \int_0^t f_{T_1}(s)f_{T_2}(t-s) \mathrm{d}s \notag \\
 
 Repeating this procedure $n-1$ times to perform the convolution of a larger number of random variables yields,
 
+\todo{wakeley eq. 2.64}
 \begin{align}
 f_{\sum_{i=1}^{n} T_i}(t) = \sum_{i=1}^{n} \lambda_i e^{-\lambda_i t} \prod_{j=1,j \ne i}^n \frac{\lambda_j}{\lambda_j - \lambda_i}
 \end{align}
 
 Plugging in the rate parameter we found earlier for the $T_{MRCA}$, we obtain,
 
+\todo{wakeley eq. 3.27}
 \begin{align}
 f_{T_{MRCA}}(t) = \sum_{i=2}^{n} \binom{i}{2} e^{-\binom{i}{2} t} \prod_{j=2,j \ne i}^n \frac{\binom{j}{2}}{\binom{j}{2} - \binom{i}{2}}
 \end{align}
 
+\todo{wakeley eq. 3.28 -- 3.31 missing}
+
 Similarly, the distribution for $T_{total}$ is,
 
+\todo{wakeley eq. 3.32}
 \begin{align}
 f_{T_{total}}(t) = \sum_{i=2}^{n} \frac{i-1}{2} e^{-\frac{i-1}{2} t} \prod_{j=2,j \ne i}^n \frac{j-1}{j-i} \label{eq:t_total_convolution}.
 \end{align}
+
+\todo{wakeley eq. 3.33 -- 3.43 missing}
+
 
 % ================================================
 % Chapter: Incorporating neutral genetic variation
@@ -643,10 +668,12 @@ Var(X) &= (\lambda^2 + \lambda) - (\lambda^2) \notag \\
 
 We've successfully derived the Poisson distribution as the generalization of binomial distribution to very large $n$, and can now use this distribution to model mutations along a genelogy, provided we provide an appropriate rate parameter for the mutation process.  Let us define the population mutation rate $\theta = 2Nu$, in which $u$ is the mutation rate per generation, per locus, or per site (depending on what we're doing).  This can be interpreted as the expected number of mutations separating the sequences of two samples, since two sequences are expected to coalesce in $N$ generations (recall equation \eqref{eq:coalescence_time_for_two_genes}).  Thus, $2Nu$ mutations are expected to appear on each branch\sidenote{Come back and revisit this... the arguments here are muddled.  Particularly, we're switching definitions of the number of samples from $N$ to $2N$ rather carelessly.}.  Thus, we can write the mutation process as
 
+\todo{wakeley eq. 4.1}
 \begin{equation}\label{eq:poisson_mutation_process}
 P(K = k | t) = \frac{\Big(\frac{\theta t}{2}\Big)^k}{k!} e^{\frac{-\theta t}{2}}
 \end{equation}
 
+\todo{wakeley eq. 4.2 missing}
 \noindent for $k = 0, 1, 2, ...$.
 
 By the way, recall equation \eqref{eq:t_total_convolution} which specified the distribution of total lengths of all the branches in the genealogy.  This equation can also be written as,
@@ -678,6 +705,7 @@ P(S = k) &= \int_0^\infty P(S = k | t)f_{T_{total}}(t) dt \\
 
 \noindent which we have obtained by repeated integration by parts\sidenote{Or, you know, by fudging it a little bit...}.  Putting our results together, we find,
 
+\todo{wakeley eq. 4.3}
 \begin{align}\label{eq:s_marginal_distribution}
 P(S = k) &= \Big(\frac{\theta}{2}\Big)^k \sum_{i=2}^n (-1)^i \binom{n-1}{i-1}\frac{i-1}{2}\Big(\frac{2}{\theta + i - 1}\Big)^{k+1} \notag \\
          &= \sum_{i=2}^n (-1)^i \binom{n-1}{i-1}\frac{i-1}{\theta + i - 1}\Big(\frac{\theta}{\theta + i - 1}\Big)^k
@@ -707,13 +735,19 @@ P(T_1 < T_2) &= \int_0^\infty e^{-\lambda t} \lambda_1 e^{-\lambda t} dt \notag 
 
 Using equation \eqref{eq:prob_of_particular_event}, we can write:
 
-\begin{align}
-P(coal | coal~or~mut) &= \frac{\lambda_1}{\lambda_1 + \lambda_2} = \frac{i(i-1)/2}{i\theta/2 + i(i-1)/2} = \frac{i-1}{\theta + i - 1} \label{eq:first_event_coal} \\
- P(mut | coal~or~mut) &= \frac{\lambda_2}{\lambda_1 + \lambda_2} = \frac{i\theta/2}{i\theta/2 + i(i-1)/2} = \frac{\theta}{\theta + i - 1} \label{eq:first_event_mut}
-\end{align}
+\todo{wakeley eq. 4.4}
+\begin{equation}
+P(coal | coal~or~mut) = \frac{\lambda_1}{\lambda_1 + \lambda_2} = \frac{i(i-1)/2}{i\theta/2 + i(i-1)/2} = \frac{i-1}{\theta + i - 1} \label{eq:first_event_coal} 
+\end{equation}
+
+\todo{wakeley eq. 4.5}
+\begin{equation}
+ P(mut | coal~or~mut) = \frac{\lambda_2}{\lambda_1 + \lambda_2} = \frac{i\theta/2}{i\theta/2 + i(i-1)/2} = \frac{\theta}{\theta + i - 1} \label{eq:first_event_mut}
+\end{equation}
 
 Finally, the distribution of the number of segregating sites that occur during the time when there are $i$ lineages ancestral to the sample is given by,
 
+\todo{wakeley eq. 4.6}
 \begin{equation}
 P(S_i = k) = \Big(\frac{i-1}{\theta + i - 1}\Big)\Big(\frac{\theta}{\theta + i - 1}\Big)^k
 \end{equation}
@@ -738,6 +772,7 @@ Var[Y] &= E[K]Var[X_i] + Var[K]E[X_i]^2 .
 
 We can now compute the expected value and variance of the distribution of segregating sites.  If $E[K]$ and $Var[K]$ are the expected value and variance of the number of mutations over 1 unit of coalescent time, then,
 
+\todo{wakeley eq. 4.7, 4.8}
 \begin{align}
   E[S] &= E[K]E[T_{total}] = \Big(\frac{\theta}{2}\Big)\Big(2\sum_{i=1}^{n-1}\frac{1}{i}\Big) = \theta \sum_{i=1}^{n-1} \frac{1}{i} \\
 Var[S] &= Var[K]E[T_{total}] + E[K]^2Var[T_{total}] \notag \\
@@ -770,12 +805,14 @@ We can simplify this even further by evaluating the double sum over $E[T_{ij}]$.
 
 Let us prove that $E[T_{ij}] = 1$.  We shall start by conditioning on the relevant part of the genealogy of a sample of size $n$.  Sequences $i$ and $j$ might have their most recent common ancestor at any of the $n-1$ coalescent events in the history of the sample.  We will write $CE(k)$ to represent the specific coalescent event that reduces the number of ancestral lineages from $k$ to $k-1$.  We will write $MRCA(i,j)$ for the most recent common ancestor of sequences $i$ and $j$.  And so there's no confusion, remember that $i$ and $j$ represent samples, $n$ is the total number of samples, and $k$ is some epoch up the height of the tree.  We then have:
 
+\todo{wakeley eq. 4.9}
 \begin{equation}\label{eq:conditioned_expected_coalescence_time}
 E[T_{ij}] = \sum_{k=2}^n E[T_{ij} | MRCA(i,j) \mbox{ is at } CE(k)] P\{MRCA(i,j) \mbox{ is at } CE(k)\}.
 \end{equation}
 
 These two terms are straightforward to compute.  First, what is the expected time to coalescence between samples $i$ and $j$, given that the coalescent event between them occurs at time $k$?  Well, the branching structure of the tree is independent of the coalescence times (remember: the trees as drawn are not real, but simply a visual aid).  So then the conditional expected coalescence time is simply the sum over expected lengths of coalescent intervals.   That is:
 
+\todo{wakeley eq. 4.10}
 \begin{align}\label{eq:sum_over_expected_coalescent_interval_lengths}
 E[T_{ij} | MRCA(i,j)\mbox{ is at }CE(k)] &= \sum_{m=k}^n E[T_m] \notag \\
                                          &= \sum_{m=k}^n \frac{1}{\binom{m}{2}} \notag \\
@@ -790,6 +827,7 @@ E[T_{ij} | MRCA(i,j)\mbox{ is at }CE(k)] &= \sum_{m=k}^n E[T_m] \notag \\
 
 Now let us evaluate the second term in equation \eqref{eq:conditioned_expected_coalescence_time}.  The probability that samples $i$ and $j$ coalesce at the $k-th$ coalescent event is the same as the probability that these samples were not involved in any preceding coalescent event and is then involved in the $k \to k - 1$ event.  Thus,
 
+\todo{wakeley eq. 4.11}
 \begin{align}
 P\{MRCA(i,j)\mbox{ is at }CE(k)\} &= \frac{1}{\binom{k}{2}} \prod_{l=k+1}^n \Big[1 - \frac{1}{\binom{l}{2}}\Big] \notag \\
                                   &= \frac{2}{k(k-1)} \prod_{l=k+1}^n \Big[1 - \frac{2}{l(l-1)}\Big] \notag \\
@@ -830,6 +868,7 @@ E[\pi] &= \frac{\theta}{\binom{n}{2}}\sum_{i=1}^{n-1}\sum_{j=i+1}^{n} E[T_{ij}] 
 
 We can also compute the variance, which is an incredibly annoying derivation, so we'll just write the final result here:
 
+\todo{wakeley eq. 4.14}
 \begin{equation}
 Var[\pi] = \frac{n+1}{3(n-1)}\theta + \frac{2(n^2 + n + 3)}{9n(n-1)}\theta^2 .
 \end{equation}
@@ -943,6 +982,7 @@ where the $\delta_{i,j}$ symbol is Kronnecker's $\delta$, equal to $0$ when $i \
 
 We can make predictions on the site frequencies $\xi_i$ and $\eta_i$ by considering the number of mutations on appropriate branches in the genealogy.  Let $\tau_i$ be the total length of branches that have $i$ descendents in the sample.  As we saw earlier, the expected value of a Poisson distribution (by which our mutations are distributed) is simply equal to the distribution parameter.  Therefore:
 
+\todo{wakeley eq. 4.15}
 \begin{equation}
 E[\xi_i] = \frac{\theta}{2}E[\tau_i]
 \end{equation}
@@ -951,24 +991,28 @@ Figure \ref{fig:coalescent_tree_with_mutation} gives an example of a mutation gi
 
 The genealogy in figure \ref{fig:coalescent_tree_with_mutation} is not the only possible genealogy for $9$ samples.  We must generate the expectations over all genealogies, branch lengths, and number of mutations.  Eventually this will yield
 
+\todo{wakeley eq. 4.16}
 \begin{equation}
 E[\tau_i] = \frac{2}{i} .
 \end{equation}
 
 \noindent To illustrate this, we shall begin with a derivation of $E[\xi_1]$, that is, the expected number of singletons in the sample.  Let us define $b_i$ to be the length of the branch leading to sequence $i$ in the sample set.  Then $\tau_1$ is equal to the sum of these.  Therefore,
 
+\todo{wakeley eq. 4.17}
 \begin{equation}
 E[\tau_1] = E\Big[\sum_{i=1}^n b_i\Big] = nE[b_i] .
 \end{equation}
 
 \noindent Furthermore, all of the lineages are exchangeable, meaning each $E[b_i]$ is the same for each sequence $i = 1,2,...,n$.  We can condition on the coalescent event at which lineage $i$ joins the genealogy.  Writing $FCA(i)$ for the first common ancestor event that involves lineage $i$, we find
 
+\todo{wakeley eq. 4.18}
 \begin{equation}
 E[b_i] = \sum_{k=2}^n E[b_i | FCA(i)\mbox{ is at }CE(k)]P\{FCA(i)\mbox{ is at }CE(k)\} .
 \end{equation}
 
 \noindent Let us compute each of the terms on the right.  First, recall that the coalescence process is a Poisson process with rate $i(i-1)/2$.  The latter term can be computed as follows:
 
+\todo{wakeley eq. 4.19}
 \begin{align}
 P\{FCA(i)\mbox{ is at }CE(k)\} &= \frac{k-1}{\binom{k}{2}} \prod_{j=k+1}^n \Big(1 - \frac{j - 1}{\binom{j}{2}}\Big) \notag \\
                                &= \frac{2(k-1)}{k(k-1)} \Big[1 - \frac{2(j-1)}{j(j-1)}\Big] \notag \\
@@ -1008,6 +1052,7 @@ E[\xi_i] = \frac{\theta}{i} .
 
 \noindent Notice how the unfolded site frequencies are not dependent on the sample size $n$.  For the folded site frequencies, we have,
 
+\todo{wakeley eq. 4.21}
 \begin{equation}
 E[\eta_i] = \theta \frac{\frac{1}{i} + \frac{1}{n-i}}{1 + \delta_{i,n-i}}
 \end{equation}
@@ -1027,15 +1072,17 @@ To begin, let us consider the long tradition of studying population genetics wit
 
 \noindent This sounds very much like the coalescent process, and indeed, the two are intimately related.  We define IBD mathematically as,
 
+\todo{wakeley eq. 4.23, 4.24}
 \begin{align}
 P\{IBD\} &= \sum_{i=1}^\infty (1 - u)^{2i} \Big(1 - \frac{1}{N}\Big)^i \frac{1}{N} \\
-         &= \int_0^\infty e^{-\theta t}e^{-t} dt
+         &\approx \int_0^\infty e^{-\theta t}e^{-t} dt
 \end{align}
 
 \noindent These equations give the expected value of the probability that there are no mutations between a pair of sequences over the distribution of the time to common ancestry for the pair.  In the exact form, we recognize the $(1 - \frac{1}{N})^i\frac{1}{N}$ terms to be the geometric distribution, representing the distribution of the time to common ancestor for a sample of size $2$ and parameter $1/N$.  The term $(1-u)^{2i}$ is the probability that neither sample experiences a mutation in the $i$ generations back to the common ancestor.  The $e^{-\theta t}$ is the same thing in the coalescent limit where time is measured in units of $N$ generations.
 
 The sum and integral can be evaluated to obtain:
 
+\todo{wakeley eq. 4.25}
 \begin{equation}
 P\{IBD\} = \frac{(1-u)^2}{Nu(2 - u) + (1 - u)^2} \approx \frac{1}{\theta + 1} .
 \end{equation}
@@ -1044,24 +1091,28 @@ P\{IBD\} = \frac{(1-u)^2}{Nu(2 - u) + (1 - u)^2} \approx \frac{1}{\theta + 1} .
 
 P\{IBD\} is equal to the probability that both members of a sample of size $2$ are of the same allelic type.  This can be extended to samples larger than $2$.  The result is the Ewens sampling formula:
 
+\todo{wakeley eq. 4.26}
 \begin{equation}\label{eq:ewens_sampling_formula}
 P\{k, a_1, a_2, ..., a_n\} = \frac{n!\theta^k}{\theta_{(n)}} \prod_{j=1}^n \frac{1}{j^{a_j}}a_j!
 \end{equation}
 
 where $\theta_{(n)} = \theta(\theta + 1)...(\theta+n-1)$ (a so-called "rising factorial").  The quantities $a_i$ are defined as follows.  Consider a sample of size $n=10$ with four alleles labeled I, II, III, and IV.  Further consider that they are found in the configuration (I, II, II, I, IV, III, I, I, I, I) among the ten samples.  Then,
 
+\todo{wakeley eq. 4.27}
 \begin{equation}
 (a_1, a_2, ..., a_10) = (2, 1, 0, 0, 0, 1, 0, 0, 0, 0).
 \end{equation}
 
 \noindent As we can see, each position in this configuration vector gives the counts for the number of allele classes at a given frequency.  For example, allele I is found $6$ times, hence $a_6 = 1$.  Two alleles (III and IV) are only found once each, thus $a_1 = 2$.  Note that the sum of these allele counts equals the total number of alleles in the sample,
 
+\todo{wakeley eq. 4.28}
 \begin{equation}
 \sum_{j=1}^n a_j = k,
 \end{equation}
 
 \noindent and that equation \eqref{eq:ewens_sampling_formula} only applies to configurations that satisfy
 
+\todo{wakeley eq. 4.29}
 \begin{equation}
 \sum_{j=1}^n ja_j = n .
 \end{equation}
@@ -1177,9 +1228,11 @@ We now turn our attention to an extension of the standard coalescent model that 
 \section{Markov processes}
 Consider again the probability of identity by descent (IBD):
 
+\todo{wakeley eq. 5.1}
 \begin{equation}
 F_t = (1-u)^2 \Big(\frac{1}{N} + \Big(1 - \frac{1}{N}\Big)F_{t-1}\Big) .
 \end{equation}
+
 
 \noindent This specifies the probability of IBD in generation $t$ in terms of the same probability in the previous generation with mutation rate $u$ at the locus.  In words, this equation states that two sequences are IBD if neither of them mutates (probability $(1 - u)^2$) and either (1) they have the same parent in the previous generation (probability $1/N$) or (2) they have different parents (probability $1 - 1/N$) and their parents are IBD (probability $F_{t-1}$).
 
@@ -1207,12 +1260,14 @@ The state space of a Markov process represents every possible state that the pro
 
 \noindent and of course, the probabilities in each row sum to $1$ for all $i$:
 
+\todo{wakeley eq. 5.2}
 \begin{equation}
 \sum_{j=1}^n P_{ij} = 1 .
 \end{equation}
 
 \noindent As an example (albeit an incredibly simple one), we can specify the transition matrix of a series of coin tosses or Bernoulli trials:
 
+\todo{wakeley eq. 5.3}
 \begin{equation}
 \mathbf{P} = 
 \begin{bmatrix}
@@ -1226,6 +1281,7 @@ The state space of a Markov process represents every possible state that the pro
 
 We will rely heavily on matrix methods to analyze Markov chains.  Specifically, recall matrix multiplication of $m$ by $n$ matrix $\mathbf{A}$ and $n$ by $r$ matrix $\mathbf{B}$.  When $\mathbf{A}$ is multiplied on the right by $\mathbf{B}$, the result is a $m$ by $r$ matrix whose $(i,j)$th entry is computed by taking the $i$th row of $\mathbf{A}$ and the $j$th column of $B$, multiplying the entires of these two vectors in succession and adding them together.  For example,
 
+\todo{wakeley eq. 5.4}
 \begin{equation}
 \begin{bmatrix}
 a_{11} & a{12} \\
@@ -1252,6 +1308,7 @@ P_{ij}^{(t)} = P\{X_{t+s}=j|X_s=i\}
 
 \noindent for all $t$, $i$, and $j$ (but not $s$).  The transition probabilities for $t=1$ are the entries of the matrix $\mathbf{P}$.  For $t=2$ we have
 
+\todo{wakeley eq. 5.5}
 \begin{equation}
 P_{ij}^{(2)} = \sum_{k=1}^n P_{ik}P_{kj}
 \end{equation}
@@ -1278,6 +1335,7 @@ P_{ij}^{(t+s)} = \sum_{k=1}^n P_{ij}^{(t)}P_{kj}^{(s)}
 
 Let's consider a numerical example: the two-state Markov process with transition matrix
 
+\todo{wakeley eq. 5.6}
 \begin{equation}
 \begin{bmatrix}
 0.90 & 0.10 \\
@@ -1301,6 +1359,7 @@ Let's consider a numerical example: the two-state Markov process with transition
 
 \noindent After five steps,
 
+\todo{wakeley eq. 5.7}
 \begin{equation}
 \begin{bmatrix}
 0.90 & 0.10 \\
@@ -1315,6 +1374,7 @@ Let's consider a numerical example: the two-state Markov process with transition
 
 \noindent It is interesting that even after $5$ iterations, the probability of being in state $1$ is so high, regardless of the initial state.  The equation above says that there is a $63\%$ chance of being in state $1$ after five steps given that the process began in state $2$.    This may seem odd since according to the initial matrix there's a $75\%$ chance of staying in state 2 once reaching it.  However, the $90\%$ change of staying in state 1 after reaching it is much stronger.  Furthermore, after $20$ steps we find,
 
+\todo{wakeley eq. 5.8}
 \begin{equation}
 \begin{bmatrix}
 0.90 & 0.10 \\
@@ -1329,11 +1389,30 @@ Let's consider a numerical example: the two-state Markov process with transition
 
 \noindent At this point, the process looks almost memoryless (it no longer matters what the prior state was).  This matrix is similar in structure to \eqref{eq:bernoulli_matrix}.
 
+\todo{As an exercise, maybe include the following code}
+\begin{verbatim}
+P = matrix( c( .9, .25, .1, .75 ), 2, 2 )
+Ppowi = list()
+Ppowi[[1]] = P
+for ( i in c ( 2:20 ) ){
+    Ppowi[[i]] = Ppowi[[i-1]] %*% P
+}
+
+print ( Ppowi[[1]] )
+
+print ( Ppowi[[2]] )
+
+print ( Ppowi[[5]] )
+
+print ( Ppowi[[20]] )
+\end{verbatim}
+
 \subsection{Classification of states and limiting behavior}
 Most Markov processes belong to one of two different states: absorbing and transient.  An absorbing state is one that, once entered, is never left (i.e. $P_{ii} = 1$ and $P_{ij} = 0$).  A transient state is one that, once entered, will be left eventually.  If the process has one or more absorbing states, it's easy to see that the probability of the Markov chain remaining in one of the transient states after $t$ steps decreases to zero as $t$ goes to infinity.  Other interesting things can happen.  We will encounter {\it ergodic} Markov chains, where it is possible to get from any state to any other state given enough time (these are often referred to as "recurrent" states).  It's also possible that the process gets trapped in some set of states, but continues to transition between them.
 
 Let's look at the long-term behavior of a Markov process by examining $\lim_{t \to \infty} \mathbf{P}^t$.  We shall find different results depending on the presence of absorbing states.  We'll first illustrate the results for an ergodic chain described, for example, by \eqref{eq:bernoulli_matrix} (a process with two recurrent and zero absorbing states).  Here, $\mathbf{P}^2 = \mathbf{P}$, thus $\lim_{t \to \infty} \mathbf{P}^t = \mathbf{P}$.  In general, the matrix for an ergodic Markov chain with $n$ states will look like
 
+\todo{wakeley eq. 5.9}
 \begin{equation}
 \lim_{t \to \infty} \mathbf{P}^t =
 \begin{bmatrix}
@@ -1348,12 +1427,14 @@ Let's look at the long-term behavior of a Markov process by examining $\lim_{t \
 
 Equation \eqref{eq:bernoulli_matrix} has the special property that every row is identical.  In cases like this, we need not know $\mathbf{P}^t$ explicitly in order to compute the limiting matrix.  Rather, we can represent a single row of the limiting matrix using a vector $\mathbf{\nu} = (\nu_1, \nu_2, \ldots, \nu_n)$.  We can then solve the equation $\mathbf{\nu} = \mathbf{\nu}\mathbf{P}$, or equivalently,
 
+\todo{wakeley eq. 5.10}
 \begin{equation}
 \nu_i = \sum_{j=1}^n \nu_j P_{ij}
 \end{equation}
 
 \noindent Additionally, we place a constraint that,
 
+\todo{wakeley eq. 5.11}
 \begin{equation}
 \sum_{i=1}^n \nu_i = 1 .
 \end{equation}
@@ -1362,6 +1443,7 @@ Equation \eqref{eq:bernoulli_matrix} has the special property that every row is 
 
 Given a Markov chain with absorbing states, the probability of being in any of the transient states will be zero as $t$ tends to infinity.  For example, consider the following three-state Markov chain with two absorbing states and transition matrix,
 
+\todo{wakeley eq. 5.12}
 \begin{equation}
 \mathbf{P} = 
 \begin{bmatrix}
@@ -1373,6 +1455,7 @@ p_{21} & 1 - p_{21} - p_{23} & p_{23} \\
 
 \noindent Multiplying this matrix by itself $t$ times, we find,
 
+\todo{wakeley eq. 5.13}
 \begin{equation}
 \mathbf{P} = 
 \begin{bmatrix}
@@ -1384,6 +1467,7 @@ p_{21} & 1 - p_{21} - p_{23} & p_{23} \\
 
 \noindent The limiting matrix is,
 
+\todo{wakeley eq. 5.14}
 \begin{equation}
 \mathbf{P} = 
 \begin{bmatrix}
@@ -1398,9 +1482,11 @@ p_{21} & 1 - p_{21} - p_{23} & p_{23} \\
 Although we did not say it before, we can now call Kingman's coalescent a continuous-time Markov process that exists in the limit of large population size.  Here we'll develop the theory of continuous-time approximations to the discrete-time Markov chains.  This will be necessary for understanding the structured coalescent.  Excitingly, we'll see the matrix version of the limits in the previous chapters that produced the exponential and Poisson distributions from the geometric and binomial distributions.
 
 First, recall the identity matrix $\mathbf{I}$, a square ($n$ by $n$) matrix with $1$'s on the diagonal and $0$'s elsewhere.  We can write our Markov transition matrix $\mathbf{P}$ as the sum of $\mathbf{P} = \mathbf{I} + \mathbf{A}$.  The off-diagonal elements of $\mathbf{A}$ are the probabilities of transition from a current state to a next state ($a_{ij} = p_{ij}$ for $i \neq j$).  The diagonal elements are negative (or zero in the case of an absorbing state) and are equal to $a_{ii} = \sum_{j \neq i} a_{ij}$.  These elements are given by $a_{ii} = -\sum_{j \neq i} a_{ij}$. 
+\todo{wakeley eq. 5.15 missing}
 
 We shall focus on situations where $a_{ij}$ is close to zero and all $a_{ij}$ terms are of the same order of magnitude.  In this scenario, we can define a single time scale $N_a$ that is proportional to the expected times $-1/a_{ii}$ between changes in state.  In the limit as $a_{ij}$ tends to zero (and thus $N_a$ tends to infinity), we find
 
+\todo{wakeley eq. 5.16}
 \begin{equation}
 \mathbf{P}^{[N_a t]} = (\mathbf{I} + \mathbf{A})^{[N_a t]} \to e^{tQ}
 \end{equation}
@@ -1422,6 +1508,7 @@ This is a discrete-time Markov process with three states, one of which is an abs
 
 Recall equation \eqref{eq:prob_of_particular_event} which gives the probability that the first event in a Poisson distribution is of a particular type.  We know that the probabilities of movement to each possible next state in the chain are the relative probabilities of moving to each possible state.  We can model a {\it jump chain} by allowing for the exponentially distributed holding times.  This matrix is written as:
 
+\todo{wakeley eq. 5.17}
 \begin{equation}
 \mathbf{P^*} = 
 \begin{bmatrix}
@@ -1437,7 +1524,13 @@ Recall equation \eqref{eq:prob_of_particular_event} which gives the probability 
 \end{bmatrix}
 \end{equation}
 
+\todo{wakeley eq. 5.18 -- 5.36 missing}
 
+% =====================
+% Chapter: ...
+% =====================
+\chapter{new chapters}
+{\color{red} Wakeley chapters 6 -- 8 to come.} 
 
 % =====================
 % Chapter: bibliography
